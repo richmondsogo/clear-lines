@@ -1,0 +1,40 @@
+{
+    "name":  "clear-lines",
+    "private":  true,
+    "version":  "0.1.0",
+    "type":  "module",
+    "scripts":  {
+                    "dev":  "vite",
+                    "build":  "tsc -b \u0026\u0026 vite build",
+                    "preview":  "vite preview",
+                    "test":  "vitest run"
+                },
+    "dependencies":  {
+                         "@tauri-apps/api":  "^2.0.0",
+                         "@tauri-apps/plugin-dialog":  "^2.0.0",
+                         "@tauri-apps/plugin-fs":  "^2.0.0",
+                         "@tauri-apps/plugin-opener":  "^2.0.0",
+                         "lucide-react":  "^0.468.0",
+                         "react":  "^18.3.1",
+                         "react-dom":  "^18.3.1",
+                         "@tiptap/react":  "^2.11.5",
+                         "@tiptap/starter-kit":  "^2.11.5",
+                         "@tiptap/extension-underline":  "^2.11.5",
+                         "@tiptap/extension-highlight":  "^2.11.5",
+                         "@tiptap/extension-task-list":  "^2.11.5",
+                         "@tiptap/extension-task-item":  "^2.11.5",
+                         "@tiptap/extension-link":  "^2.11.5",
+                         "zustand":  "^5.0.3",
+                         "fuse.js":  "^7.1.0",
+                         "framer-motion":  "^12.6.2"
+                     },
+    "devDependencies":  {
+                            "@tauri-apps/cli":  "^2.0.0",
+                            "@types/react":  "^18.3.12",
+                            "@types/react-dom":  "^18.3.1",
+                            "@vitejs/plugin-react":  "^4.3.4",
+                            "typescript":  "^5.6.3",
+                            "vite":  "^6.0.1",
+                            "vitest":  "^2.1.8"
+                        }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Clear Lines",
+  "version": "0.1.0",
+  "identifier": "com.clearlines.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [{
+      "title": "Clear Lines",
+      "width": 1100,
+      "height": 720,
+      "minWidth": 740,
+      "minHeight": 520,
+      "resizable": true
+      ,"decorations": false
+    }],
+    "security": { "csp": null }
+  },
+  "bundle": { "active": true, "targets": "all" }
+}
