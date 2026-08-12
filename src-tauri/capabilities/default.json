@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Default capability for the Clear Lines desktop window.",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:default", "fs:default", "opener:default"]
+  "permissions": ["core:default", "core:window:default", "dialog:default", "fs:default", "opener:default"]
 }
