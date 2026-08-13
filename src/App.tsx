@@ -80,7 +80,7 @@ function WindowControls() {
     showDebug('minimize clicked');
     try {
       if (isTauri) {
-        const { invoke } = await import('@tauri-apps/api/tauri');
+        const { invoke } = await import('@tauri-apps/api/core');
         await invoke('minimize_window');
       }
     } catch (e: any) {
@@ -93,7 +93,7 @@ function WindowControls() {
     showDebug('maximize clicked');
     try {
       if (isTauri) {
-        const { invoke } = await import('@tauri-apps/api/tauri');
+        const { invoke } = await import('@tauri-apps/api/core');
         const maxed = await invoke('toggle_maximize');
         setIsMaximized(Boolean(maxed));
       }
@@ -107,7 +107,7 @@ function WindowControls() {
     showDebug('close clicked');
     try {
       if (isTauri) {
-        const { invoke } = await import('@tauri-apps/api/tauri');
+        const { invoke } = await import('@tauri-apps/api/core');
         await invoke('close_window');
       }
     } catch (e: any) {
