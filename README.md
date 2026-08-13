@@ -1,4 +1,4 @@
-# Clear Lines
+# Clear Lines - Windows Notes App
 
 Clear Lines is a focused, offline-first Tauri v2 desktop notes app that
 prioritizes a quiet writing surface and fast local search.
