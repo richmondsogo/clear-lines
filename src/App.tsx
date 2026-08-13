@@ -101,9 +101,21 @@ function WindowControls() {
   const handleMaximize = async () => {
     try {
       if (isTauri) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const maxed = await invoke('toggle_maximize');
+        setIsMaximized(Boolean(maxed));
+        return;
+      }
+    } catch (e: any) {
+      console.error('invoke maximize error', e);
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
         await getCurrentWindow().toggleMaximize();
         const maxed = await getCurrentWindow().isMaximized();
-        setIsMaximized(maxed);
+        setIsMaximized(Boolean(maxed));
+        return;
+      } catch (e2: any) {
+        console.error('fallback maximize error', e2);
       }
     } catch (e) {
       console.warn("Maximize failed:", e);
@@ -123,7 +135,7 @@ function WindowControls() {
       <button className="win-btn minimize" onClick={handleMinimize} title="Minimize">
         <Minus size={13} />
       </button>
-      <button className="win-btn maximize" onClick={handleMaximize} title="Maximize">
+      <button className="win-btn maximize" data-tauri-drag-region="false" onClick={handleMaximize} title="Maximize">
         {isMaximized ? <Copy size={11} /> : <Square size={11} />}
       </button>
       <button className="win-btn close" onClick={handleClose} title="Close">
@@ -146,6 +158,23 @@ export default function App() {
   const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | "error">("saved");
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
+
+  // Use explicit JS dragging so clickable elements in the titlebar are not
+  // blocked by CSS/data-attribute-based drag regions on Windows.
+  const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+  const handleTitlebarMouseDown = async (e: MouseEvent) => {
+    // If the click originated from a control button or other interactive
+    // element, don't start dragging so clicks still register.
+    const el = e.target as HTMLElement | null;
+    if (!el) return;
+    if (el.closest('.win-btn') || el.closest('.titlebar-actions') || el.closest('button') || el.getAttribute('role') === 'button') return;
+    if (!isTauri) return;
+    try {
+      await getCurrentWindow().startDragging();
+    } catch (err) {
+      // ignore drag errors in non-tauri or unsupported environments
+    }
+  };
 
   const selected = notes.find((note) => note.id === selectedId) ?? null;
 
@@ -262,7 +291,7 @@ export default function App() {
           <span className="brand-title">Clear Lines</span>
         </div>
 
-        <div className="titlebar-drag-spacer" data-tauri-drag-region />
+        <div className="titlebar-drag-spacer" />
 
         <div className="titlebar-actions">
           <button className="titlebar-btn search-trigger-btn" onClick={() => setShowSearch(true)} title="Search notes (Ctrl+K)">
