@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type Dispatch, type MouseEvent, type ReactNode, type RefObject, type SetStateAction } from "react";
 import {
-  Archive, ChevronDown, FileText, FolderOpen, Inbox, Menu, Moon, MoreHorizontal,
-  PanelLeftClose, Palette, Plus, RotateCcw, Search, Settings, Sun, Tag, Trash2, X
+  Archive, Check, ChevronRight, Code, Copy, FileText, FolderOpen, Inbox,
+  List, ListTodo, Maximize2, Menu, Minimize2, Minus, Moon, MoreHorizontal,
+  Palette, PanelLeft, PanelLeftClose, Pin, Plus, Quote, Redo, RotateCcw,
+  Search, Settings, Sparkles, Square, Sun, Tag, Trash2, Undo, X, Smile
 } from "lucide-react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { cleanText, loadData, noteTitle, saveData } from "./storage";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -14,25 +17,120 @@ import Link from "@tiptap/extension-link";
 import type { Folder, Note, NoteCover, Preferences } from "./types";
 
 type View = Folder | "all" | "settings";
+
+interface ContextMenuState {
+  x: number;
+  y: number;
+  note: Note;
+}
+
 const folderMeta: Record<Folder, { label: string; icon: typeof Inbox }> = {
-  inbox: { label: "Inbox", icon: Inbox }, notes: { label: "Notes", icon: FileText },
-  archive: { label: "Archive", icon: Archive }, trash: { label: "Trash", icon: Trash2 }
+  inbox: { label: "Inbox", icon: Inbox },
+  notes: { label: "Notes", icon: FileText },
+  archive: { label: "Archive", icon: Archive },
+  trash: { label: "Trash", icon: Trash2 }
 };
 
-const makeNote = (): Note => ({
-  id: crypto.randomUUID(), title: "", subtitle: "", icon: "✦", body: "", folder: "inbox", tags: [], cover: { type: "gradient", value: "linear-gradient(135deg, #54755e, #b9d6b5)" }, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), deletedAt: null
+const makeNote = (patch?: Partial<Note>): Note => ({
+  id: crypto.randomUUID(),
+  title: "",
+  subtitle: "",
+  icon: "✦",
+  body: "",
+  folder: "inbox",
+  tags: [],
+  cover: { type: "gradient", value: "linear-gradient(135deg, #4b6b55, #9bbd96)" },
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  deletedAt: null,
+  ...patch
 });
 
 const coverPresets: NoteCover[] = [
-  { type: "color", value: "#d8e7df" }, { type: "color", value: "#ebe0ce" }, { type: "color", value: "#d9e2f1" }, { type: "color", value: "#ebd9df" },
-  { type: "gradient", value: "linear-gradient(135deg, #54755e, #b9d6b5)" }, { type: "gradient", value: "linear-gradient(135deg, #6e799a, #d5c8ee)" },
-  { type: "gradient", value: "linear-gradient(135deg, #bd765c, #f1cda0)" }, { type: "gradient", value: "linear-gradient(135deg, #426b77, #b9dfe1)" }
+  { type: "gradient", value: "linear-gradient(135deg, #4b6b55, #9bbd96)" },
+  { type: "gradient", value: "linear-gradient(135deg, #4a6fa5, #88b04b)" },
+  { type: "gradient", value: "linear-gradient(135deg, #6c5b7b, #c06c84)" },
+  { type: "gradient", value: "linear-gradient(135deg, #2b580c, #639a67)" },
+  { type: "gradient", value: "linear-gradient(135deg, #d4a373, #fefae0)" },
+  { type: "gradient", value: "linear-gradient(135deg, #1f2041, #4b3f72)" },
+  { type: "color", value: "#3a4a3e" },
+  { type: "color", value: "#2c3e50" }
 ];
-const emojis = ["✦", "✎", "☼", "☕", "⌁", "❋", "☁", "♡", "◆", "✿"];
+
+const iconCategories = [
+  {
+    name: "Minimal",
+    icons: ["✦", "✎", "☼", "☕", "⌁", "❋", "☁", "♡", "◆", "✿"]
+  },
+  {
+    name: "Productivity",
+    icons: ["💡", "⚡", "🎯", "📚", "📌", "🔖", "🚀", "🎨", "📝", "🔍"]
+  },
+  {
+    name: "Nature & Vibe",
+    icons: ["🌿", "🌙", "🌊", "🌲", "✨", "🔥", "🍀", "🏔️", "☕", "🕯️"]
+  }
+];
 
 function formatDate(date: string) {
-  const days = Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
-  return days === 0 ? "Today" : days === 1 ? "Yesterday" : new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(date));
+  const diff = Date.now() - new Date(date).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(date));
+}
+
+function WindowControls() {
+  const [isMaximized, setIsMaximized] = useState(false);
+  const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+
+  useEffect(() => {
+    if (!isTauri) return;
+    const appWindow = getCurrentWindow();
+    appWindow.isMaximized().then(setIsMaximized).catch(() => {});
+  }, [isTauri]);
+
+  const handleMinimize = async () => {
+    try {
+      if (isTauri) await getCurrentWindow().minimize();
+    } catch (e) {
+      console.warn("Minimize failed:", e);
+    }
+  };
+
+  const handleMaximize = async () => {
+    try {
+      if (isTauri) {
+        await getCurrentWindow().toggleMaximize();
+        const maxed = await getCurrentWindow().isMaximized();
+        setIsMaximized(maxed);
+      }
+    } catch (e) {
+      console.warn("Maximize failed:", e);
+    }
+  };
+
+  const handleClose = async () => {
+    try {
+      if (isTauri) await getCurrentWindow().close();
+    } catch (e) {
+      console.warn("Close failed:", e);
+    }
+  };
+
+  return (
+    <div className="window-controls" data-tauri-drag-region={false}>
+      <button className="win-btn minimize" onClick={handleMinimize} title="Minimize">
+        <Minus size={13} />
+      </button>
+      <button className="win-btn maximize" onClick={handleMaximize} title="Maximize">
+        {isMaximized ? <Copy size={11} /> : <Square size={11} />}
+      </button>
+      <button className="win-btn close" onClick={handleClose} title="Close">
+        <X size={13} />
+      </button>
+    </div>
+  );
 }
 
 export default function App() {
@@ -40,115 +138,917 @@ export default function App() {
   const [notes, setNotes] = useState(initial.notes);
   const [preferences, setPreferences] = useState<Preferences>(initial.preferences);
   const [view, setView] = useState<View>("inbox");
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(initial.notes[0]?.id ?? null);
   const [query, setQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | "error">("saved");
-  const editor = useRef<HTMLDivElement>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const selected = notes.find((note) => note.id === selectedId) ?? null;
+
+  const allTags = useMemo(() => {
+    const tagsSet = new Set<string>();
+    notes.forEach(note => note.tags?.forEach(tag => tagsSet.add(tag)));
+    return Array.from(tagsSet).sort();
+  }, [notes]);
+
   const visible = notes.filter(note => {
     const matchesView = view === "all" || note.folder === view;
+    const matchesTag = !selectedTag || (note.tags || []).includes(selectedTag);
     const haystack = `${noteTitle(note)} ${note.subtitle || ""} ${(note.tags || []).join(" ")} ${cleanText(note.body)}`.toLowerCase();
-    return matchesView && haystack.includes(query.toLowerCase());
+    return matchesView && matchesTag && haystack.includes(query.toLowerCase());
   }).sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || +new Date(b.updatedAt) - +new Date(a.updatedAt));
 
   useEffect(() => {
     setSaveStatus("saving");
     const snapshot = { notes, preferences };
-    const timeout = window.setTimeout(() => setSaveStatus(saveData(snapshot) ? "saved" : "error"), 600);
+    const timeout = window.setTimeout(() => setSaveStatus(saveData(snapshot) ? "saved" : "error"), 500);
     return () => window.clearTimeout(timeout);
   }, [notes, preferences]);
-  useEffect(() => {
-    const flush = () => saveData({ notes, preferences });
-    window.addEventListener("beforeunload", flush);
-    return () => window.removeEventListener("beforeunload", flush);
-  }, [notes, preferences]);
+
   useEffect(() => {
     document.documentElement.dataset.theme = preferences.theme;
     document.documentElement.dataset.font = preferences.fontSize;
     document.documentElement.dataset.width = preferences.lineWidth;
     document.documentElement.style.setProperty("--accent", preferences.accentColor);
   }, [preferences]);
+
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n") { event.preventDefault(); createNote(); }
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setShowSearch(true); }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n") {
+        event.preventDefault();
+        createNote();
+      }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setShowSearch(true);
+      }
+      if (event.key === "Escape") {
+        setContextMenu(null);
+      }
     };
-    window.addEventListener("keydown", handler); return () => window.removeEventListener("keydown", handler);
-  });
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   function createNote() {
     const note = makeNote();
-    setNotes(current => [note, ...current]); setSelectedId(note.id); setView("inbox"); setQuery("");
-    setTimeout(() => document.getElementById("note-title")?.focus(), 0);
+    setNotes(current => [note, ...current]);
+    setSelectedId(note.id);
+    setView("inbox");
+    setSelectedTag(null);
+    setQuery("");
+    setTimeout(() => document.getElementById("note-title")?.focus(), 50);
   }
-  function updateNote(patch: Partial<Note>) {
-    if (!selected) return;
-    setNotes(current => current.map(note => note.id === selected.id ? { ...note, ...patch, updatedAt: new Date().toISOString() } : note));
+
+  function duplicateNote(target: Note) {
+    const dupe = makeNote({
+      title: `${target.title} (Copy)`,
+      subtitle: target.subtitle,
+      icon: target.icon,
+      body: target.body,
+      folder: target.folder,
+      tags: [...(target.tags || [])],
+      cover: target.cover
+    });
+    setNotes(current => [dupe, ...current]);
+    setSelectedId(dupe.id);
   }
-  function moveNote(folder: Folder) { updateNote({ folder, deletedAt: folder === "trash" ? new Date().toISOString() : null }); if (folder === "trash") setView("trash"); }
-  function deleteForever() { if (!selected) return; setNotes(current => current.filter(note => note.id !== selected.id)); setSelectedId(visible.find(note => note.id !== selected.id)?.id ?? null); }
-  function chooseView(next: View) { setView(next); setQuery(""); if (next !== "settings") setSelectedId(null); }
+
+  function updateNote(patch: Partial<Note>, noteId?: string) {
+    const idToUpdate = noteId || selected?.id;
+    if (!idToUpdate) return;
+    setNotes(current => current.map(n => n.id === idToUpdate ? { ...n, ...patch, updatedAt: new Date().toISOString() } : n));
+  }
+
+  function moveNote(folder: Folder, noteId?: string) {
+    const idToUpdate = noteId || selected?.id;
+    if (!idToUpdate) return;
+    setNotes(current => current.map(n => n.id === idToUpdate ? { ...n, folder, deletedAt: folder === "trash" ? new Date().toISOString() : null, updatedAt: new Date().toISOString() } : n));
+  }
+
+  function deleteForever(noteId?: string) {
+    const idToDelete = noteId || selected?.id;
+    if (!idToDelete) return;
+    const remaining = notes.filter(n => n.id !== idToDelete);
+    setNotes(remaining);
+    if (selectedId === idToDelete) {
+      setSelectedId(remaining[0]?.id ?? null);
+    }
+  }
+
+  function chooseView(next: View) {
+    setView(next);
+    setSelectedTag(null);
+    setQuery("");
+    if (next !== "settings" && visible.length > 0) {
+      setSelectedId(visible[0].id);
+    }
+  }
+
   const counts = (folder: Folder) => notes.filter(note => note.folder === folder).length;
 
-  return <main className={`app ${sidebarOpen ? "" : "sidebar-hidden"}`}>
-    <aside className="sidebar" aria-label="Navigation">
-      <div className="brand"><div className="brand-mark" /><span>Clear Lines</span><button className="icon-button desktop-only" onClick={() => setSidebarOpen(false)} aria-label="Collapse sidebar"><PanelLeftClose size={18}/></button></div>
-      <button className="new-note" onClick={createNote}><Plus size={18}/><span>New note</span><kbd>⌘ N</kbd></button>
-      <nav>
-        <Nav icon={FolderOpen} label="All notes" active={view === "all"} count={notes.filter(n => n.folder !== "trash").length} onClick={() => chooseView("all")} />
-        {(Object.keys(folderMeta) as Folder[]).map(folder => <Nav key={folder} icon={folderMeta[folder].icon} label={folderMeta[folder].label} active={view === folder} count={counts(folder)} onClick={() => chooseView(folder)} />)}
-      </nav>
-      <div className="sidebar-bottom"><button className={`nav-item ${view === "settings" ? "active" : ""}`} onClick={() => chooseView("settings")}><Settings size={18}/><span>Settings</span></button><p>Made for clear thinking.</p></div>
-    </aside>
-    <section className="content">
-      <header className="topbar"><button className="icon-button mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><Menu size={20}/></button><h1>{view === "settings" ? "Settings" : view === "all" ? "All notes" : folderMeta[view].label}</h1><div className="top-actions"><button className="search-button" onClick={() => setShowSearch(true)}><Search size={17}/><span>Search</span><kbd>⌘ K</kbd></button><button className="icon-button" onClick={createNote} aria-label="Create note"><Plus size={20}/></button></div></header>
-      {view === "settings" ? <SettingsPanel preferences={preferences} setPreferences={setPreferences} /> : <div className="workspace">
-        <section className="note-list" aria-label="Notes"><div className="list-heading"><span>{visible.length} {visible.length === 1 ? "note" : "notes"}</span><button className="icon-button" onClick={createNote} aria-label="New note"><Plus size={18}/></button></div>{visible.length ? visible.map(note => <NoteCard key={note.id} note={note} selected={note.id === selectedId} onClick={() => setSelectedId(note.id)} />) : <div className="empty-list"><FileText size={24}/><p>No notes here yet.</p><button onClick={createNote}>Create a note</button></div>}</section>
-        <Editor note={selected} editorRef={editor} onUpdate={updateNote} onMove={moveNote} onDelete={deleteForever} />
-      </div>}
-    </section>
-    <p className={`save-status ${saveStatus}`} role="status">{saveStatus === "saving" ? "Saving…" : saveStatus === "error" ? "Could not save locally" : "Saved"}</p>
-    {showSearch && <SearchDialog query={query} setQuery={setQuery} notes={notes} onClose={() => setShowSearch(false)} onSelect={note => { setSelectedId(note.id); setView(note.folder); setShowSearch(false); }} />}
-  </main>;
+  return (
+    <div className={`app-shell ${sidebarOpen ? "" : "sidebar-collapsed"}`} onClick={() => setContextMenu(null)}>
+      {/* Top Titlebar with window drag region */}
+      <header className="app-titlebar" data-tauri-drag-region>
+        <div className="titlebar-brand" data-tauri-drag-region>
+          <div className="brand-logo">
+            <Sparkles size={14} />
+          </div>
+          <span className="brand-title">Clear Lines</span>
+        </div>
+
+        <div className="titlebar-drag-spacer" data-tauri-drag-region />
+
+        <div className="titlebar-actions">
+          <button className="titlebar-btn search-trigger-btn" onClick={() => setShowSearch(true)} title="Search notes (Ctrl+K)">
+            <Search size={14} />
+            <span>Search</span>
+            <kbd>⌘K</kbd>
+          </button>
+          <WindowControls />
+        </div>
+      </header>
+
+      {/* Main Grid Workspace */}
+      <div className="app-body">
+        {/* Sidebar */}
+        <aside className="sidebar">
+          <div className="sidebar-header">
+            <button className="primary-action-btn" onClick={createNote}>
+              <Plus size={16} />
+              <span>New Note</span>
+              <kbd>⌘N</kbd>
+            </button>
+            <button
+              className="icon-btn collapse-btn"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            >
+              <PanelLeftClose size={16} />
+            </button>
+          </div>
+
+          <nav className="nav-group">
+            <div className="nav-section-label">Library</div>
+            <Nav
+              icon={FolderOpen}
+              label="All Notes"
+              active={view === "all" && !selectedTag}
+              count={notes.filter(n => n.folder !== "trash").length}
+              onClick={() => chooseView("all")}
+            />
+            {(Object.keys(folderMeta) as Folder[]).map(folder => (
+              <Nav
+                key={folder}
+                icon={folderMeta[folder].icon}
+                label={folderMeta[folder].label}
+                active={view === folder && !selectedTag}
+                count={counts(folder)}
+                onClick={() => chooseView(folder)}
+              />
+            ))}
+
+            {allTags.length > 0 && (
+              <>
+                <div className="nav-section-label margin-top">Tags</div>
+                {allTags.map(tag => (
+                  <button
+                    key={tag}
+                    className={`nav-item tag-nav-item ${selectedTag === tag ? "active" : ""}`}
+                    onClick={() => {
+                      setSelectedTag(tag === selectedTag ? null : tag);
+                    }}
+                  >
+                    <Tag size={14} />
+                    <span>#{tag}</span>
+                  </button>
+                ))}
+              </>
+            )}
+          </nav>
+
+          <div className="sidebar-footer">
+            <button
+              className={`nav-item ${view === "settings" ? "active" : ""}`}
+              onClick={() => chooseView("settings")}
+            >
+              <Settings size={16} />
+              <span>Settings</span>
+            </button>
+            <div className="sidebar-footnote">Clear Lines v0.1.0</div>
+          </div>
+        </aside>
+
+        {/* Content Area */}
+        <main className="main-content">
+          {view === "settings" ? (
+            <SettingsPanel preferences={preferences} setPreferences={setPreferences} />
+          ) : (
+            <div className="workspace">
+              {/* Note List Column */}
+              <section className="note-list-panel">
+                <div className="list-header">
+                  {!sidebarOpen && (
+                    <button
+                      className="icon-btn expand-btn"
+                      onClick={() => setSidebarOpen(true)}
+                      title="Expand sidebar"
+                    >
+                      <PanelLeft size={16} />
+                    </button>
+                  )}
+                  <h2 className="list-title">
+                    {selectedTag
+                      ? `#${selectedTag}`
+                      : view === "all"
+                      ? "All Notes"
+                      : folderMeta[view].label}
+                  </h2>
+                  <span className="count-badge">{visible.length}</span>
+                  <button className="icon-btn add-btn" onClick={createNote} title="New note">
+                    <Plus size={16} />
+                  </button>
+                </div>
+
+                <div className="note-cards-scroll">
+                  {visible.length > 0 ? (
+                    visible.map(note => (
+                      <NoteCard
+                        key={note.id}
+                        note={note}
+                        selected={note.id === selectedId}
+                        onClick={() => setSelectedId(note.id)}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedId(note.id);
+                          // Keep the menu fully visible when a card is near a window edge.
+                          setContextMenu({
+                            x: Math.max(8, Math.min(e.clientX, window.innerWidth - 182)),
+                            y: Math.max(8, Math.min(e.clientY, window.innerHeight - 250)),
+                            note
+                          });
+                        }}
+                      />
+                    ))
+                  ) : (
+                    <div className="empty-list-state">
+                      <FileText size={32} />
+                      <p>No notes found</p>
+                      <button className="secondary-btn" onClick={createNote}>
+                        Create a note
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* Editor Workspace */}
+              <Editor
+                note={selected}
+                editorRef={editorRef}
+                onUpdate={updateNote}
+                onMove={moveNote}
+                onDelete={deleteForever}
+              />
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Footer Status Bar */}
+      <div className={`status-indicator ${saveStatus}`}>
+        {saveStatus === "saving" ? "Saving changes..." : saveStatus === "error" ? "Storage error" : "Saved"}
+      </div>
+
+      {/* Search Modal */}
+      {showSearch && (
+        <SearchDialog
+          query={query}
+          setQuery={setQuery}
+          notes={notes}
+          onClose={() => setShowSearch(false)}
+          onSelect={note => {
+            setSelectedId(note.id);
+            setView(note.folder);
+            setShowSearch(false);
+          }}
+        />
+      )}
+
+      {/* Right-Click Context Menu */}
+      {contextMenu && (
+        <NoteContextMenu
+          menu={contextMenu}
+          onClose={() => setContextMenu(null)}
+          onPin={() => updateNote({ pinned: !contextMenu.note.pinned }, contextMenu.note.id)}
+          onDuplicate={() => duplicateNote(contextMenu.note)}
+          onArchive={() => moveNote(contextMenu.note.folder === "archive" ? "inbox" : "archive", contextMenu.note.id)}
+          onTrash={() => moveNote(contextMenu.note.folder === "trash" ? "inbox" : "trash", contextMenu.note.id)}
+          onDeleteForever={() => deleteForever(contextMenu.note.id)}
+          onCopy={() => {
+            navigator.clipboard.writeText(cleanText(contextMenu.note.body));
+          }}
+        />
+      )}
+    </div>
+  );
 }
 
-function Nav({ icon: Icon, label, active, count, onClick }: { icon: typeof Inbox; label: string; active: boolean; count?: number; onClick(): void }) { return <button className={`nav-item ${active ? "active" : ""}`} onClick={onClick}><Icon size={18}/><span>{label}</span>{count !== undefined && <em>{count}</em>}</button>; }
-function NoteCard({ note, selected, onClick }: { note: Note; selected: boolean; onClick(): void }) { return <button className={`note-card ${selected ? "selected" : ""}`} onClick={onClick}><span className="note-thumbnail" style={note.cover ? { background: note.cover.value } : undefined}>{note.icon || "✦"}</span><div><strong>{noteTitle(note)}</strong><p>{note.subtitle || cleanText(note.body) || "No additional text"}</p>{note.tags?.length ? <small>{note.tags.slice(0, 2).map(tag => `#${tag}`).join(" ")}</small> : null}</div><time>{formatDate(note.updatedAt)}</time>{note.pinned && <span className="pin">•</span>}</button>; }
+function Nav({ icon: Icon, label, active, count, onClick }: { icon: typeof Inbox; label: string; active: boolean; count?: number; onClick(): void }) {
+  return (
+    <button className={`nav-item ${active ? "active" : ""}`} onClick={onClick}>
+      <Icon size={16} />
+      <span>{label}</span>
+      {count !== undefined && <span className="nav-count">{count}</span>}
+    </button>
+  );
+}
+
+function NoteCard({ note, selected, onClick, onContextMenu }: { note: Note; selected: boolean; onClick(): void; onContextMenu(e: MouseEvent): void }) {
+  const title = noteTitle(note);
+  const snippet = note.subtitle || cleanText(note.body) || "No content yet";
+
+  return (
+    <div
+      className={`note-card ${selected ? "selected" : ""}`}
+      onClick={onClick}
+      onContextMenu={onContextMenu}
+    >
+      <div className="card-top-row">
+        <span className="card-icon">{note.icon || "✦"}</span>
+        <h3 className="card-title">{title}</h3>
+        {note.pinned && <Pin size={12} className="card-pin" />}
+      </div>
+      <p className="card-snippet">{snippet}</p>
+      <div className="card-meta">
+        <time>{formatDate(note.updatedAt)}</time>
+        {note.tags && note.tags.length > 0 && (
+          <div className="card-tags">
+            {note.tags.slice(0, 2).map(tag => (
+              <span key={tag} className="card-tag">#{tag}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NoteContextMenu({ menu, onClose, onPin, onDuplicate, onArchive, onTrash, onDeleteForever, onCopy }: {
+  menu: ContextMenuState;
+  onClose(): void;
+  onPin(): void;
+  onDuplicate(): void;
+  onArchive(): void;
+  onTrash(): void;
+  onDeleteForever(): void;
+  onCopy(): void;
+}) {
+  return (
+    <div
+      className="custom-context-menu"
+      style={{ top: menu.y, left: menu.x }}
+      onClick={e => e.stopPropagation()}
+    >
+      <button onClick={() => { onPin(); onClose(); }}>
+        <Pin size={14} />
+        <span>{menu.note.pinned ? "Unpin Note" : "Pin Note"}</span>
+      </button>
+      <button onClick={() => { onDuplicate(); onClose(); }}>
+        <Copy size={14} />
+        <span>Duplicate Note</span>
+      </button>
+      <button onClick={() => { onCopy(); onClose(); }}>
+        <FileText size={14} />
+        <span>Copy Text</span>
+      </button>
+      <div className="context-divider" />
+      {menu.note.folder !== "trash" && (
+        <button onClick={() => { onArchive(); onClose(); }}>
+          <Archive size={14} />
+          <span>{menu.note.folder === "archive" ? "Restore to Inbox" : "Archive Note"}</span>
+        </button>
+      )}
+      {menu.note.folder === "trash" ? (
+        <>
+          <button onClick={() => { onTrash(); onClose(); }}>
+            <RotateCcw size={14} />
+            <span>Restore to Inbox</span>
+          </button>
+          <button className="danger" onClick={() => { onDeleteForever(); onClose(); }}>
+            <Trash2 size={14} />
+            <span>Delete Permanently</span>
+          </button>
+        </>
+      ) : (
+        <button className="danger" onClick={() => { onTrash(); onClose(); }}>
+          <Trash2 size={14} />
+          <span>Move to Trash</span>
+        </button>
+      )}
+    </div>
+  );
+}
 
 function Editor({ note, editorRef, onUpdate, onMove, onDelete }: { note: Note | null; editorRef: RefObject<HTMLDivElement>; onUpdate(patch: Partial<Note>): void; onMove(folder: Folder): void; onDelete(): void }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  if (!note) return <article className="editor empty-editor"><div><div className="empty-orb"><FileText size={28}/></div><h2>Select a note</h2><p>Choose a note from the list, or create a new one to begin.</p><button className="primary-button" onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "n", ctrlKey: true }))}><Plus size={17}/> New note</button></div></article>;
-  return <article className="editor"><div className="editor-meta"><span>{formatDate(note.updatedAt)} · {cleanText(note.body).split(/\s+/).filter(Boolean).length} words</span><div className="menu-wrap"><button className="icon-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Note actions"><MoreHorizontal size={20}/></button>{menuOpen && <div className="note-menu"><button onClick={() => { onUpdate({ pinned: !note.pinned }); setMenuOpen(false); }}>{note.pinned ? "Unpin note" : "Pin note"}</button>{note.folder !== "archive" && note.folder !== "trash" && <button onClick={() => { onMove("archive"); setMenuOpen(false); }}>Archive note</button>}{note.folder === "trash" ? <><button onClick={() => { onMove("inbox"); setMenuOpen(false); }}><RotateCcw size={14}/> Restore to inbox</button><button className="danger" onClick={onDelete}>Delete forever</button></> : <button className="danger" onClick={() => { onMove("trash"); setMenuOpen(false); }}>Move to trash</button>}</div>}</div></div><NoteCover note={note} onUpdate={onUpdate}/><input id="note-title" value={note.title} placeholder="Untitled note" onChange={event => onUpdate({ title: event.target.value })} aria-label="Note title"/><input className="note-subtitle" value={note.subtitle || ""} placeholder="Add a subtitle…" onChange={event => onUpdate({ subtitle: event.target.value })} aria-label="Note subtitle"/><TiptapEditor key={note.id} content={note.body} onUpdate={body => onUpdate({ body })}/></article>;
+
+  if (!note) {
+    return (
+      <div className="editor-empty-container">
+        <div className="empty-content">
+          <div className="empty-icon-circle">
+            <Sparkles size={28} />
+          </div>
+          <h2>Select a Note</h2>
+          <p>Choose a note from the left list or create a new note to start writing.</p>
+          <button className="primary-action-btn" onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "n", ctrlKey: true }))}>
+            <Plus size={16} />
+            <span>Create New Note</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const wordCount = cleanText(note.body).split(/\s+/).filter(Boolean).length;
+
+  return (
+    <article className="editor-workspace">
+      {/* Editor Sub-Header Toolbar */}
+      <div className="editor-toolbar-header">
+        <div className="meta-info">
+          <span className="meta-date">Updated {formatDate(note.updatedAt)}</span>
+          <span className="meta-divider">•</span>
+          <span className="meta-words">{wordCount} words</span>
+        </div>
+
+        <div className="editor-top-actions">
+          <button
+            className={`icon-btn ${note.pinned ? "active-pin" : ""}`}
+            onClick={() => onUpdate({ pinned: !note.pinned })}
+            title={note.pinned ? "Unpin note" : "Pin note"}
+          >
+            <Pin size={16} />
+          </button>
+
+          <div className="menu-container">
+            <button className="icon-btn" onClick={() => setMenuOpen(!menuOpen)} title="Note options">
+              <MoreHorizontal size={16} />
+            </button>
+            {menuOpen && (
+              <div className="dropdown-menu">
+                <button onClick={() => { onUpdate({ pinned: !note.pinned }); setMenuOpen(false); }}>
+                  <Pin size={14} />
+                  <span>{note.pinned ? "Unpin Note" : "Pin Note"}</span>
+                </button>
+                {note.folder !== "archive" && note.folder !== "trash" && (
+                  <button onClick={() => { onMove("archive"); setMenuOpen(false); }}>
+                    <Archive size={14} />
+                    <span>Archive Note</span>
+                  </button>
+                )}
+                {note.folder === "trash" ? (
+                  <>
+                    <button onClick={() => { onMove("inbox"); setMenuOpen(false); }}>
+                      <RotateCcw size={14} />
+                      <span>Restore Note</span>
+                    </button>
+                    <button className="danger" onClick={onDelete}>
+                      <Trash2 size={14} />
+                      <span>Delete Permanently</span>
+                    </button>
+                  </>
+                ) : (
+                  <button className="danger" onClick={() => { onMove("trash"); setMenuOpen(false); }}>
+                    <Trash2 size={14} />
+                    <span>Move to Trash</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="editor-scroll-body">
+        {/* Cover Image Banner Component */}
+        <NoteCoverBanner note={note} onUpdate={onUpdate} />
+
+        <div className="editor-fields-container">
+          <input
+            id="note-title"
+            className="title-input"
+            value={note.title}
+            placeholder="Untitled Note"
+            onChange={e => onUpdate({ title: e.target.value })}
+          />
+
+          <input
+            className="subtitle-input"
+            value={note.subtitle || ""}
+            placeholder="Add a subtitle or summary..."
+            onChange={e => onUpdate({ subtitle: e.target.value })}
+          />
+
+          <TiptapEditor key={note.id} content={note.body} onUpdate={body => onUpdate({ body })} />
+        </div>
+      </div>
+    </article>
+  );
 }
 
-function NoteCover({ note, onUpdate }: { note: Note; onUpdate(patch: Partial<Note>): void }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
+function NoteCoverBanner({ note, onUpdate }: { note: Note; onUpdate(patch: Partial<Note>): void }) {
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [tagDraft, setTagDraft] = useState("");
+  const bannerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const closePickers = (event: PointerEvent) => {
+      if (!bannerRef.current?.contains(event.target as Node)) {
+        setCoverPickerOpen(false);
+        setIconPickerOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setCoverPickerOpen(false);
+        setIconPickerOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", closePickers);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closePickers);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
+
   const addTag = () => {
     const tag = tagDraft.trim().replace(/^#/, "");
-    if (tag && !(note.tags || []).some(value => value.toLowerCase() === tag.toLowerCase())) onUpdate({ tags: [...(note.tags || []), tag] });
+    if (tag && !(note.tags || []).some(t => t.toLowerCase() === tag.toLowerCase())) {
+      onUpdate({ tags: [...(note.tags || []), tag] });
+    }
     setTagDraft("");
   };
-  return <section className="note-cover" style={note.cover ? { background: note.cover.value } : undefined}>
-    <button className="cover-picker" onClick={() => setPickerOpen(open => !open)} aria-expanded={pickerOpen}><Palette size={15}/> Change cover</button>
-    {pickerOpen && <div className="cover-popover"><strong>Cover</strong><div className="cover-options">{coverPresets.map((cover, index) => <button key={`${cover.value}-${index}`} className="cover-swatch" style={{ background: cover.value }} onClick={() => { onUpdate({ cover }); setPickerOpen(false); }} aria-label={`Use cover ${index + 1}`}/>)}</div><button className="clear-cover" onClick={() => { onUpdate({ cover: null }); setPickerOpen(false); }}>Remove cover</button></div>}
-    <div className="emoji-row" aria-label="Choose note icon">{emojis.map(emoji => <button key={emoji} className={note.icon === emoji ? "active" : ""} onClick={() => onUpdate({ icon: emoji })}>{emoji}</button>)}</div>
-    <div className="cover-icon" aria-hidden="true">{note.icon || "✦"}</div>
-    <div className="tag-editor"><Tag size={14}/>{(note.tags || []).map(tag => <span className="tag-chip" key={tag}>#{tag}<button aria-label={`Remove ${tag} tag`} onClick={() => onUpdate({ tags: (note.tags || []).filter(value => value !== tag) })}>×</button></span>)}<input value={tagDraft} onChange={event => setTagDraft(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); addTag(); } }} onBlur={addTag} placeholder="Add tag" aria-label="Add tag"/></div>
-  </section>;
+
+  return (
+    <div ref={bannerRef} className="note-cover-banner" style={note.cover ? { background: note.cover.value } : undefined}>
+      <div className="cover-controls">
+        <button className="cover-picker-btn" onClick={() => { setCoverPickerOpen(!coverPickerOpen); setIconPickerOpen(false); }}>
+          <Palette size={14} />
+          <span>Cover Style</span>
+        </button>
+
+        <button className="cover-picker-btn" onClick={() => { setIconPickerOpen(!iconPickerOpen); setCoverPickerOpen(false); }}>
+          <Smile size={14} />
+          <span>Icon Avatar</span>
+        </button>
+
+        {coverPickerOpen && (
+          <div className="cover-popover">
+            <span className="popover-title">Preset Styles</span>
+            <div className="swatch-grid">
+              {coverPresets.map((cover, i) => (
+                <button
+                  key={i}
+                  className="swatch-item"
+                  style={{ background: cover.value }}
+                  onClick={() => {
+                    onUpdate({ cover });
+                    setCoverPickerOpen(false);
+                  }}
+                />
+              ))}
+            </div>
+            <button className="clear-cover-btn" onClick={() => { onUpdate({ cover: null }); setCoverPickerOpen(false); }}>
+              Remove Cover
+            </button>
+          </div>
+        )}
+
+        {iconPickerOpen && (
+          <div className="cover-popover icon-picker-popover">
+            {iconCategories.map(category => (
+              <div key={category.name} className="icon-category">
+                <span className="popover-title">{category.name}</span>
+                <div className="icon-grid">
+                  {category.icons.map(icon => (
+                    <button
+                      key={icon}
+                      className={`icon-grid-btn ${note.icon === icon ? "active" : ""}`}
+                      onClick={() => {
+                        onUpdate({ icon });
+                        setIconPickerOpen(false);
+                      }}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <button className="clear-cover-btn" onClick={() => { onUpdate({ icon: "" }); setIconPickerOpen(false); }}>
+              Remove Icon Avatar
+            </button>
+          </div>
+        )}
+      </div>
+
+      <button
+        className="note-avatar-badge"
+        onClick={() => {
+          setIconPickerOpen(!iconPickerOpen);
+          setCoverPickerOpen(false);
+        }}
+        title="Click to change icon avatar"
+      >
+        {note.icon || "✦"}
+      </button>
+
+      <div className="tag-bar">
+        <Tag size={13} className="tag-icon" />
+        {(note.tags || []).map(tag => (
+          <span className="tag-pill" key={tag}>
+            #{tag}
+            <button onClick={() => onUpdate({ tags: (note.tags || []).filter(t => t !== tag) })}>×</button>
+          </span>
+        ))}
+        <input
+          className="tag-input"
+          value={tagDraft}
+          onChange={e => setTagDraft(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addTag();
+            }
+          }}
+          onBlur={addTag}
+          placeholder="+ Tag"
+        />
+      </div>
+    </div>
+  );
 }
 
 function TiptapEditor({ content, onUpdate }: { content: string; onUpdate(value: string): void }) {
-  const editor = useEditor({ extensions: [StarterKit, Underline, Highlight, TaskList, TaskItem.configure({ nested: true }), Link.configure({ openOnClick: false })], content, editorProps: { attributes: { class: "editable", "data-placeholder": "Start writing…" } }, onUpdate: ({ editor: instance }) => onUpdate(instance.getHTML()) });
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+      Highlight,
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      Link.configure({ openOnClick: false })
+    ],
+    content,
+    editorProps: {
+      attributes: {
+        class: "tiptap-editable-content",
+        "data-placeholder": "Start writing your note..."
+      }
+    },
+    onUpdate: ({ editor: instance }) => onUpdate(instance.getHTML())
+  });
+
   if (!editor) return null;
-  const action = (callback: () => void) => (event: MouseEvent) => { event.preventDefault(); callback(); };
-  return <><div className="format-toolbar" aria-label="Formatting controls"><button title="Bold" onMouseDown={action(() => editor.chain().focus().toggleBold().run())}><b>B</b></button><button title="Italic" onMouseDown={action(() => editor.chain().focus().toggleItalic().run())}><i>I</i></button><button title="Underline" onMouseDown={action(() => editor.chain().focus().toggleUnderline().run())}><u>U</u></button><button title="Strike through" onMouseDown={action(() => editor.chain().focus().toggleStrike().run())}>S̶</button><button title="Bulleted list" onMouseDown={action(() => editor.chain().focus().toggleBulletList().run())}>• List</button><button title="Checklist" onMouseDown={action(() => editor.chain().focus().toggleTaskList().run())}>☐ Tasks</button><button title="Undo" onMouseDown={action(() => editor.chain().focus().undo().run())}>↶</button><button title="Redo" onMouseDown={action(() => editor.chain().focus().redo().run())}>↷</button></div><EditorContent editor={editor}/></>;
+
+  const action = (cb: () => void) => (e: MouseEvent) => {
+    e.preventDefault();
+    cb();
+  };
+
+  return (
+    <div className="rich-editor-container">
+      <div className="format-toolbar">
+        <button
+          className={editor.isActive("bold") ? "active" : ""}
+          onMouseDown={action(() => editor.chain().focus().toggleBold().run())}
+          title="Bold (Ctrl+B)"
+        >
+          <b>B</b>
+        </button>
+        <button
+          className={editor.isActive("italic") ? "active" : ""}
+          onMouseDown={action(() => editor.chain().focus().toggleItalic().run())}
+          title="Italic (Ctrl+I)"
+        >
+          <i>I</i>
+        </button>
+        <button
+          className={editor.isActive("underline") ? "active" : ""}
+          onMouseDown={action(() => editor.chain().focus().toggleUnderline().run())}
+          title="Underline (Ctrl+U)"
+        >
+          <u>U</u>
+        </button>
+        <button
+          className={editor.isActive("strike") ? "active" : ""}
+          onMouseDown={action(() => editor.chain().focus().toggleStrike().run())}
+          title="Strikethrough"
+        >
+          <s>S</s>
+        </button>
+        <div className="toolbar-divider" />
+        <button
+          className={editor.isActive("bulletList") ? "active" : ""}
+          onMouseDown={action(() => editor.chain().focus().toggleBulletList().run())}
+          title="Bullet List"
+        >
+          <List size={14} />
+        </button>
+        <button
+          className={editor.isActive("taskList") ? "active" : ""}
+          onMouseDown={action(() => editor.chain().focus().toggleTaskList().run())}
+          title="Task List"
+        >
+          <ListTodo size={14} />
+        </button>
+        <button
+          className={editor.isActive("codeBlock") ? "active" : ""}
+          onMouseDown={action(() => editor.chain().focus().toggleCodeBlock().run())}
+          title="Code Block"
+        >
+          <Code size={14} />
+        </button>
+        <button
+          className={editor.isActive("blockquote") ? "active" : ""}
+          onMouseDown={action(() => editor.chain().focus().toggleBlockquote().run())}
+          title="Quote"
+        >
+          <Quote size={14} />
+        </button>
+        <div className="toolbar-divider" />
+        <button onMouseDown={action(() => editor.chain().focus().undo().run())} title="Undo">
+          <Undo size={14} />
+        </button>
+        <button onMouseDown={action(() => editor.chain().focus().redo().run())} title="Redo">
+          <Redo size={14} />
+        </button>
+      </div>
+
+      <EditorContent editor={editor} />
+    </div>
+  );
 }
 
-function SettingsPanel({ preferences, setPreferences }: { preferences: Preferences; setPreferences: Dispatch<SetStateAction<Preferences>> }) { const set = <K extends keyof Preferences>(key: K, value: Preferences[K]) => setPreferences(p => ({ ...p, [key]: value })); return <div className="settings-panel"><section><h2>Appearance</h2><p>Choose a calm reading environment that feels right to you.</p><Setting label="Theme" description="Set how Clear Lines looks."><Segment options={["system", "light", "dark"]} value={preferences.theme} onChange={v => set("theme", v as Preferences["theme"])} icons={{ system: <Settings size={16}/>, light: <Sun size={16}/>, dark: <Moon size={16}/> }}/></Setting><Setting label="Accent colour" description="Tint active states and highlights."><label className="color-input"><input type="color" value={preferences.accentColor} onChange={event => set("accentColor", event.target.value)} aria-label="Accent colour"/><span>{preferences.accentColor}</span></label></Setting><Setting label="Text size" description="Adjust the size of your writing and notes."><Segment options={["small", "medium", "large"]} value={preferences.fontSize} onChange={v => set("fontSize", v as Preferences["fontSize"])} /></Setting><Setting label="Line width" description="Control the measure of the editor."><Segment options={["compact", "comfortable", "wide"]} value={preferences.lineWidth} onChange={v => set("lineWidth", v as Preferences["lineWidth"])} /></Setting></section><section><h2>Keyboard shortcuts</h2><div className="shortcuts"><span>New note <kbd>⌘ N</kbd></span><span>Search notes <kbd>⌘ K</kbd></span><span>Editor formatting <kbd>⌘ B / I / U</kbd></span></div></section></div>; }
-function Setting({ label, description, children }: { label: string; description: string; children: ReactNode }) { return <div className="setting"><div><h3>{label}</h3><p>{description}</p></div>{children}</div>; }
-function Segment({ options, value, onChange, icons }: { options: string[]; value: string; onChange(value: string): void; icons?: Record<string, ReactNode> }) { return <div className="segment">{options.map(option => <button key={option} className={value === option ? "chosen" : ""} onClick={() => onChange(option)}>{icons?.[option]}{option}</button>)}</div>; }
-function SearchDialog({ query, setQuery, notes, onClose, onSelect }: { query: string; setQuery(v: string): void; notes: Note[]; onClose(): void; onSelect(note: Note): void }) { const input = useRef<HTMLInputElement>(null); useEffect(() => input.current?.focus(), []); const matches = notes.filter(note => `${noteTitle(note)} ${note.subtitle || ""} ${(note.tags || []).join(" ")} ${cleanText(note.body)}`.toLowerCase().includes(query.toLowerCase())).slice(0, 8); return <div className="dialog-backdrop" onMouseDown={onClose}><div className="search-dialog" onMouseDown={e => e.stopPropagation()}><div><Search size={19}/><input ref={input} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search your notes…" aria-label="Search notes"/><button className="icon-button" onClick={onClose}><X size={18}/></button></div><section>{matches.length ? matches.map(note => <button key={note.id} onClick={() => onSelect(note)}><FileText size={17}/><span><strong>{noteTitle(note)}</strong><small>{note.subtitle || cleanText(note.body) || "Empty note"}</small></span><time>{formatDate(note.updatedAt)}</time></button>) : <p>No matching notes.</p>}</section></div></div>; }
+function SettingsPanel({ preferences, setPreferences }: { preferences: Preferences; setPreferences: Dispatch<SetStateAction<Preferences>> }) {
+  const set = <K extends keyof Preferences>(key: K, value: Preferences[K]) => setPreferences(p => ({ ...p, [key]: value }));
+
+  const accentPresets = ["#54755e", "#4a6fa5", "#9b59b6", "#e67e22", "#e74c3c", "#34495e"];
+
+  return (
+    <div className="settings-container">
+      <div className="settings-header">
+        <h2>Preferences</h2>
+        <p>Customize your Clear Lines writing environment.</p>
+      </div>
+
+      <div className="settings-sections">
+        <section className="setting-card">
+          <h3>Theme</h3>
+          <p className="setting-desc">Choose between Light, Dark, or System mode.</p>
+          <div className="segment-control">
+            <button className={preferences.theme === "system" ? "chosen" : ""} onClick={() => set("theme", "system")}>
+              <Settings size={14} />
+              <span>System</span>
+            </button>
+            <button className={preferences.theme === "light" ? "chosen" : ""} onClick={() => set("theme", "light")}>
+              <Sun size={14} />
+              <span>Light</span>
+            </button>
+            <button className={preferences.theme === "dark" ? "chosen" : ""} onClick={() => set("theme", "dark")}>
+              <Moon size={14} />
+              <span>Dark</span>
+            </button>
+          </div>
+        </section>
+
+        <section className="setting-card">
+          <h3>Accent Color</h3>
+          <p className="setting-desc">Set the primary accent color for active states and highlights.</p>
+          <div className="color-picker-row">
+            {accentPresets.map(color => (
+              <button
+                key={color}
+                className={`color-dot ${preferences.accentColor === color ? "active" : ""}`}
+                style={{ background: color }}
+                onClick={() => set("accentColor", color)}
+              />
+            ))}
+            <label className="color-custom-input">
+              <input
+                type="color"
+                value={preferences.accentColor}
+                onChange={e => set("accentColor", e.target.value)}
+              />
+              <span>{preferences.accentColor}</span>
+            </label>
+          </div>
+        </section>
+
+        <section className="setting-card">
+          <h3>Text Size</h3>
+          <p className="setting-desc">Adjust the editor font size for comfortable reading.</p>
+          <div className="segment-control">
+            {(["small", "medium", "large"] as const).map(size => (
+              <button
+                key={size}
+                className={preferences.fontSize === size ? "chosen" : ""}
+                onClick={() => set("fontSize", size)}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="setting-card">
+          <h3>Line Width</h3>
+          <p className="setting-desc">Set the maximum reading width of your note content.</p>
+          <div className="segment-control">
+            {(["compact", "comfortable", "wide"] as const).map(width => (
+              <button
+                key={width}
+                className={preferences.lineWidth === width ? "chosen" : ""}
+                onClick={() => set("lineWidth", width)}
+              >
+                {width}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="setting-card">
+          <h3>Shortcuts</h3>
+          <div className="shortcut-list">
+            <div className="shortcut-item"><span>New Note</span><kbd>⌘N</kbd></div>
+            <div className="shortcut-item"><span>Search Notes</span><kbd>⌘K</kbd></div>
+            <div className="shortcut-item"><span>Bold Text</span><kbd>⌘B</kbd></div>
+            <div className="shortcut-item"><span>Italic Text</span><kbd>⌘I</kbd></div>
+            <div className="shortcut-item"><span>Underline Text</span><kbd>⌘U</kbd></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function SearchDialog({ query, setQuery, notes, onClose, onSelect }: { query: string; setQuery(v: string): void; notes: Note[]; onClose(): void; onSelect(note: Note): void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => inputRef.current?.focus(), []);
+
+  const matches = notes
+    .filter(note =>
+      `${noteTitle(note)} ${note.subtitle || ""} ${(note.tags || []).join(" ")} ${cleanText(note.body)}`
+        .toLowerCase()
+        .includes(query.toLowerCase())
+    )
+    .slice(0, 10);
+
+  return (
+    <div className="dialog-backdrop" onClick={onClose}>
+      <div className="search-modal" onClick={e => e.stopPropagation()}>
+        <div className="search-header">
+          <Search size={18} className="search-icon" />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search notes, tags, or content..."
+          />
+          <button className="icon-btn" onClick={onClose}>
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="search-results">
+          {matches.length > 0 ? (
+            matches.map(note => (
+              <button key={note.id} className="search-result-item" onClick={() => onSelect(note)}>
+                <FileText size={16} />
+                <div className="result-text">
+                  <div className="result-title">{noteTitle(note)}</div>
+                  <div className="result-snippet">{note.subtitle || cleanText(note.body) || "Empty note"}</div>
+                </div>
+                <time>{formatDate(note.updatedAt)}</time>
+              </button>
+            ))
+          ) : (
+            <div className="search-empty">No matching notes found</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
