@@ -62,7 +62,6 @@ function formatDate(date: string) {
 
 function WindowControls() {
   const [isMaximized, setIsMaximized] = useState(false);
-  const [debugMsg, setDebugMsg] = useState<string | null>(null);
   const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
   useEffect(() => {
@@ -71,17 +70,11 @@ function WindowControls() {
     appWindow.isMaximized().then(setIsMaximized).catch(() => {});
   }, [isTauri]);
 
-  const showDebug = (msg: string) => {
-    setDebugMsg(msg);
-    setTimeout(() => setDebugMsg(null), 2000);
-  };
-
   const handleMinimize = async () => {
     try {
       if (isTauri) {
         const { invoke } = await import('@tauri-apps/api/core');
         await invoke('minimize_window');
-        showDebug('minimize ok');
         return;
       }
     } catch (e: any) {
@@ -90,11 +83,9 @@ function WindowControls() {
       try {
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
         await getCurrentWindow().minimize();
-        showDebug('minimize ok (fallback)');
         return;
       } catch (e2: any) {
         console.error('fallback minimize error', e2);
-        showDebug('minimize failed: ' + (e2?.toString() ?? e?.toString() ?? 'unknown'));
       }
     }
   };
@@ -105,7 +96,6 @@ function WindowControls() {
         const { invoke } = await import('@tauri-apps/api/core');
         const maxed = await invoke('toggle_maximize');
         setIsMaximized(Boolean(maxed));
-        showDebug('maximize ok');
         return;
       }
     } catch (e: any) {
@@ -115,11 +105,9 @@ function WindowControls() {
         await getCurrentWindow().toggleMaximize();
         const maxed = await getCurrentWindow().isMaximized();
         setIsMaximized(Boolean(maxed));
-        showDebug('maximize ok (fallback)');
         return;
       } catch (e2: any) {
         console.error('fallback maximize error', e2);
-        showDebug('maximize failed: ' + (e2?.toString() ?? e?.toString() ?? 'unknown'));
       }
     }
   };
@@ -137,12 +125,10 @@ function WindowControls() {
       try {
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
         await getCurrentWindow().close();
-        showDebug('close ok (fallback)');
-        return;
-      } catch (e2: any) {
-        console.error('fallback close error', e2);
-        showDebug('close failed: ' + (e2?.toString() ?? e?.toString() ?? 'unknown'));
-      }
+          return;
+        } catch (e2: any) {
+          console.error('fallback close error', e2);
+        }
     }
   };
 
@@ -157,7 +143,6 @@ function WindowControls() {
       <button className="win-btn close" data-tauri-drag-region="false" onClick={handleClose} title="Close">
         <X size={12} />
       </button>
-      {debugMsg ? <div className="dbg" aria-live="polite">{debugMsg}</div> : null}
     </div>
   );
 }
