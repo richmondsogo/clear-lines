@@ -77,7 +77,6 @@ function WindowControls() {
   };
 
   const handleMinimize = async () => {
-    showDebug('minimize clicked');
     try {
       if (isTauri) {
         const { invoke } = await import('@tauri-apps/api/core');
@@ -101,7 +100,6 @@ function WindowControls() {
   };
 
   const handleMaximize = async () => {
-    showDebug('maximize clicked');
     try {
       if (isTauri) {
         const { invoke } = await import('@tauri-apps/api/core');
@@ -127,7 +125,6 @@ function WindowControls() {
   };
 
   const handleClose = async () => {
-    showDebug('close clicked');
     try {
       if (isTauri) {
         const { invoke } = await import('@tauri-apps/api/core');
