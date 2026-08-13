@@ -126,6 +126,23 @@ export default function App() {
   const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | "error">("saved");
   const editorRef = useRef<HTMLDivElement>(null);
 
+  // Use explicit JS dragging so clickable elements in the titlebar are not
+  // blocked by CSS/data-attribute-based drag regions on Windows.
+  const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+  const handleTitlebarMouseDown = async (e: MouseEvent) => {
+    // If the click originated from a control button or other interactive
+    // element, don't start dragging so clicks still register.
+    const el = e.target as HTMLElement | null;
+    if (!el) return;
+    if (el.closest('.win-btn') || el.closest('.titlebar-actions') || el.closest('button') || el.getAttribute('role') === 'button') return;
+    if (!isTauri) return;
+    try {
+      await getCurrentWindow().startDragging();
+    } catch (err) {
+      // ignore drag errors in non-tauri or unsupported environments
+    }
+  };
+
   const selected = notes.find((note) => note.id === selectedId) ?? null;
 
   const allTags = useMemo(() => {
@@ -210,16 +227,16 @@ export default function App() {
 
   return (
     <div className={`app-shell ${sidebarOpen ? "" : "sidebar-collapsed"}`}>
-      {/* Top Titlebar with window drag region */}
-      <header className="app-titlebar" data-tauri-drag-region>
-        <div className="titlebar-brand" data-tauri-drag-region>
+      {/* Top Titlebar (use JS dragging so buttons remain clickable) */}
+      <header className="app-titlebar" onMouseDown={handleTitlebarMouseDown}>
+        <div className="titlebar-brand">
           <div className="brand-logo">
             <Sparkles size={14} />
           </div>
           <span className="brand-title">Clear Lines</span>
         </div>
 
-        <div className="titlebar-drag-spacer" data-tauri-drag-region />
+        <div className="titlebar-drag-spacer" />
 
         <div className="titlebar-actions">
           <button className="titlebar-btn" onClick={() => setShowSearch(true)} title="Search (Ctrl+K)">
