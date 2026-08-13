@@ -6,6 +6,7 @@ import {
   Search, Settings, Sparkles, Square, Sun, Tag, Trash2, Undo, X, Smile
 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 import { cleanText, loadData, noteTitle, saveData } from "./storage";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -105,9 +106,22 @@ function WindowControls() {
   // Minimize: prefer invoke or fall back to the JS API.
   const handleMinimize = async () => {
     try {
-      if (isTauri) await getCurrentWindow().minimize();
+      if (isTauri) {
+        const win = getCurrentWindow();
+        if (typeof win.minimize === 'function') {
+          await win.minimize();
+          return;
+        }
+      }
     } catch (e) {
-      console.warn("Minimize failed:", e);
+      console.warn("Minimize via window API failed:", e);
+    }
+
+    // Fallback to Rust invoke command if window API isn't available or failed
+    try {
+      await invoke('minimize_window');
+    } catch (e) {
+      console.error('invoke minimize_window failed:', e);
     }
   };
 
@@ -131,27 +145,64 @@ function WindowControls() {
       } catch (e2) {
         console.error('fallback maximize error', e2);
       }
+        const win = getCurrentWindow();
+        if (typeof (win as any).toggleMaximize === 'function') {
+          await (win as any).toggleMaximize();
+        } else {
+          const wasMax = await win.isMaximized();
+          if (wasMax) await (win as any).unmaximize?.(); else await (win as any).maximize?.();
+        }
+        const nowMax = await win.isMaximized();
+        setIsMaximized(Boolean(nowMax));
+        return;
+      }
+    } catch (e) {
+      console.warn("Maximize via window API failed:", e);
+    }
+
+    // Fallback to Rust invoke command
+    try {
+      const res = await invoke('toggle_maximize');
+      setIsMaximized(Boolean(res));
+    } catch (e) {
+      console.error('invoke toggle_maximize failed:', e);
     }
   };
 
   // Close the window.
   const handleClose = async () => {
     try {
-      if (isTauri) await getCurrentWindow().close();
+      if (isTauri) {
+        const win = getCurrentWindow();
+        if (typeof win.close === 'function') {
+          await win.close();
+          return;
+        }
+      }
     } catch (e) {
-      console.warn("Close failed:", e);
+      console.warn("Close via window API failed:", e);
+    }
+
+    // Fallback to Rust invoke command
+    try {
+      await invoke('close_window');
+    } catch (e) {
+      console.error('invoke close_window failed:', e);
     }
   };
 
   return (
     <div className="window-controls" data-tauri-drag-region={false}>
       <button className="win-btn minimize" data-tauri-drag-region={false} onClick={handleMinimize} title="Minimize">
+    <div className="window-controls">
+      <button className="win-btn minimize" data-tauri-drag-region="false" onClick={handleMinimize} title="Minimize">
         <Minus size={13} />
       </button>
       <button className="win-btn maximize" data-tauri-drag-region={false} onClick={handleMaximize} title="Maximize">
         {isMaximized ? <Copy size={11} /> : <Square size={11} />}
       </button>
       <button className="win-btn close" data-tauri-drag-region={false} onClick={handleClose} title="Close">
+      <button className="win-btn close" data-tauri-drag-region="false" onClick={handleClose} title="Close">
         <X size={13} />
       </button>
     </div>
