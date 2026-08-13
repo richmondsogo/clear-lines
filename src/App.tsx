@@ -79,10 +79,13 @@ function WindowControls() {
   const handleMinimize = async () => {
     showDebug('minimize clicked');
     try {
-      if (isTauri) await getCurrentWindow().minimize();
-    } catch (e) {
-      console.warn(e);
-      showDebug('minimize failed');
+      if (isTauri) {
+        const { invoke } = await import('@tauri-apps/api/tauri');
+        await invoke('minimize_window');
+      }
+    } catch (e: any) {
+      console.error(e);
+      showDebug(e?.toString() ?? 'minimize failed');
     }
   };
 
@@ -90,23 +93,26 @@ function WindowControls() {
     showDebug('maximize clicked');
     try {
       if (isTauri) {
-        await getCurrentWindow().toggleMaximize();
-        const maxed = await getCurrentWindow().isMaximized();
-        setIsMaximized(maxed);
+        const { invoke } = await import('@tauri-apps/api/tauri');
+        const maxed = await invoke('toggle_maximize');
+        setIsMaximized(Boolean(maxed));
       }
-    } catch (e) {
-      console.warn(e);
-      showDebug('maximize failed');
+    } catch (e: any) {
+      console.error(e);
+      showDebug(e?.toString() ?? 'maximize failed');
     }
   };
 
   const handleClose = async () => {
     showDebug('close clicked');
     try {
-      if (isTauri) await getCurrentWindow().close();
-    } catch (e) {
-      console.warn(e);
-      showDebug('close failed');
+      if (isTauri) {
+        const { invoke } = await import('@tauri-apps/api/tauri');
+        await invoke('close_window');
+      }
+    } catch (e: any) {
+      console.error(e);
+      showDebug(e?.toString() ?? 'close failed');
     }
   };
 
