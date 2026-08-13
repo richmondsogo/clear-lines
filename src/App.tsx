@@ -117,10 +117,8 @@ function WindowControls() {
       } catch (e2: any) {
         console.error('fallback maximize error', e2);
       }
-    } catch (e) {
-      console.warn("Maximize failed:", e);
     }
-  };
+  ;
 
   const handleClose = async () => {
     try {
