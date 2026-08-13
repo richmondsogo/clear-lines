@@ -9,6 +9,11 @@
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
+  "tauri": {
+    "allowlist": {
+      "all": true
+    }
+  },
   "app": {
     "windows": [{
       "title": "Clear Lines",
@@ -16,8 +21,8 @@
       "height": 720,
       "minWidth": 740,
       "minHeight": 520,
-      "resizable": true
-      ,"decorations": false
+      "resizable": true,
+      "decorations": false
     }],
     "security": { "csp": null }
   },
