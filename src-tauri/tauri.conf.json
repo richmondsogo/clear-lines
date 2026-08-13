@@ -9,11 +9,10 @@
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
-  "tauri": {
-    "allowlist": {
-      "all": true
-    }
+  "allowlist": {
+    "all": true
   },
+
   "app": {
     "windows": [{
       "title": "Clear Lines",
