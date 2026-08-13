@@ -81,6 +81,18 @@ function formatDate(date: string) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(date));
 }
 
+/**
+ * WindowControls
+ *
+ * Renders the custom titlebar controls for the native window.
+ *
+ * Implementation notes:
+ * - Primary path: invoke Rust commands via `@tauri-apps/api/core` for stable
+ *   behavior across dev and production.
+ * - Fallback: use the JS window API (`@tauri-apps/api/window`) if invoke fails.
+ * - Buttons opt out of the drag region so clicks are delivered correctly
+ *   on Windows.
+ */
 function WindowControls() {
   const [isMaximized, setIsMaximized] = useState(false);
   const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -91,6 +103,7 @@ function WindowControls() {
     appWindow.isMaximized().then(setIsMaximized).catch(() => {});
   }, [isTauri]);
 
+  // Minimize: prefer invoke or fall back to the JS API.
   const handleMinimize = async () => {
     try {
       if (isTauri) {
@@ -112,9 +125,26 @@ function WindowControls() {
     }
   };
 
+  // Maximize: invoke Rust command and update local state.
   const handleMaximize = async () => {
     try {
       if (isTauri) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const maxed = await invoke('toggle_maximize');
+        setIsMaximized(Boolean(maxed));
+        return;
+      }
+    } catch (e) {
+      console.error('invoke maximize error', e);
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        await getCurrentWindow().toggleMaximize();
+        const maxed = await getCurrentWindow().isMaximized();
+        setIsMaximized(Boolean(maxed));
+        return;
+      } catch (e2) {
+        console.error('fallback maximize error', e2);
+      }
         const win = getCurrentWindow();
         if (typeof (win as any).toggleMaximize === 'function') {
           await (win as any).toggleMaximize();
@@ -139,6 +169,7 @@ function WindowControls() {
     }
   };
 
+  // Close the window.
   const handleClose = async () => {
     try {
       if (isTauri) {
@@ -161,13 +192,16 @@ function WindowControls() {
   };
 
   return (
+    <div className="window-controls" data-tauri-drag-region={false}>
+      <button className="win-btn minimize" data-tauri-drag-region={false} onClick={handleMinimize} title="Minimize">
     <div className="window-controls">
       <button className="win-btn minimize" data-tauri-drag-region="false" onClick={handleMinimize} title="Minimize">
         <Minus size={13} />
       </button>
-      <button className="win-btn maximize" data-tauri-drag-region="false" onClick={handleMaximize} title="Maximize">
+      <button className="win-btn maximize" data-tauri-drag-region={false} onClick={handleMaximize} title="Maximize">
         {isMaximized ? <Copy size={11} /> : <Square size={11} />}
       </button>
+      <button className="win-btn close" data-tauri-drag-region={false} onClick={handleClose} title="Close">
       <button className="win-btn close" data-tauri-drag-region="false" onClick={handleClose} title="Close">
         <X size={13} />
       </button>
@@ -192,17 +226,24 @@ export default function App() {
   // Use explicit JS dragging so clickable elements in the titlebar are not
   // blocked by CSS/data-attribute-based drag regions on Windows.
   const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+
+  /**
+   * handleTitlebarMouseDown
+   *
+   * Start native dragging when the user presses the titlebar. Do not start
+   * dragging if the event target is an interactive control (buttons, inputs).
+   * This keeps buttons clickable while allowing the window to be moved.
+   */
   const handleTitlebarMouseDown = async (e: MouseEvent) => {
-    // If the click originated from a control button or other interactive
-    // element, don't start dragging so clicks still register.
     const el = e.target as HTMLElement | null;
     if (!el) return;
+    // If the mousedown originated on a control, do not start dragging.
     if (el.closest('.win-btn') || el.closest('.titlebar-actions') || el.closest('button') || el.getAttribute('role') === 'button') return;
     if (!isTauri) return;
     try {
       await getCurrentWindow().startDragging();
     } catch (err) {
-      // ignore drag errors in non-tauri or unsupported environments
+      // startDragging may not be available in non-tauri environments; ignore.
     }
   };
 
