@@ -3,7 +3,7 @@ import {
   Archive, Check, ChevronRight, Code, Copy, FileText, FolderOpen, Inbox,
   List, ListTodo, Maximize2, Menu, Minimize2, Minus, Moon, MoreHorizontal,
   Palette, PanelLeft, PanelLeftClose, Pin, Plus, Quote, Redo, RotateCcw,
-  Search, Settings, Sparkles, Square, Sun, Tag, Trash2, Undo, X, Smile
+  Search, Settings, Sparkles, Square, Sun, Tag, Trash2, Undo, X
 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { cleanText, loadData, noteTitle, saveData } from "./storage";
@@ -18,12 +18,6 @@ import type { Folder, Note, NoteCover, Preferences } from "./types";
 
 type View = Folder | "all" | "settings";
 
-interface ContextMenuState {
-  x: number;
-  y: number;
-  note: Note;
-}
-
 const folderMeta: Record<Folder, { label: string; icon: typeof Inbox }> = {
   inbox: { label: "Inbox", icon: Inbox },
   notes: { label: "Notes", icon: FileText },
@@ -31,7 +25,7 @@ const folderMeta: Record<Folder, { label: string; icon: typeof Inbox }> = {
   trash: { label: "Trash", icon: Trash2 }
 };
 
-const makeNote = (patch?: Partial<Note>): Note => ({
+const makeNote = (): Note => ({
   id: crypto.randomUUID(),
   title: "",
   subtitle: "",
@@ -42,8 +36,7 @@ const makeNote = (patch?: Partial<Note>): Note => ({
   cover: { type: "gradient", value: "linear-gradient(135deg, #4b6b55, #9bbd96)" },
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
-  deletedAt: null,
-  ...patch
+  deletedAt: null
 });
 
 const coverPresets: NoteCover[] = [
@@ -57,20 +50,7 @@ const coverPresets: NoteCover[] = [
   { type: "color", value: "#2c3e50" }
 ];
 
-const iconCategories = [
-  {
-    name: "Minimal",
-    icons: ["✦", "✎", "☼", "☕", "⌁", "❋", "☁", "♡", "◆", "✿"]
-  },
-  {
-    name: "Productivity",
-    icons: ["💡", "⚡", "🎯", "📚", "📌", "🔖", "🚀", "🎨", "📝", "🔍"]
-  },
-  {
-    name: "Nature & Vibe",
-    icons: ["🌿", "🌙", "🌊", "🌲", "✨", "🔥", "🍀", "🏔️", "☕", "🕯️"]
-  }
-];
+const emojis = ["✦", "✎", "☼", "☕", "⌁", "❋", "☁", "♡", "◆", "✿", "💡", "⚡", "🎯", "📚"];
 
 function formatDate(date: string) {
   const diff = Date.now() - new Date(date).getTime();
@@ -94,7 +74,7 @@ function WindowControls() {
     try {
       if (isTauri) await getCurrentWindow().minimize();
     } catch (e) {
-      console.warn("Minimize failed:", e);
+      console.warn(e);
     }
   };
 
@@ -106,7 +86,7 @@ function WindowControls() {
         setIsMaximized(maxed);
       }
     } catch (e) {
-      console.warn("Maximize failed:", e);
+      console.warn(e);
     }
   };
 
@@ -114,20 +94,20 @@ function WindowControls() {
     try {
       if (isTauri) await getCurrentWindow().close();
     } catch (e) {
-      console.warn("Close failed:", e);
+      console.warn(e);
     }
   };
 
   return (
     <div className="window-controls" data-tauri-drag-region={false}>
       <button className="win-btn minimize" onClick={handleMinimize} title="Minimize">
-        <Minus size={13} />
+        <Minus size={12} />
       </button>
       <button className="win-btn maximize" onClick={handleMaximize} title="Maximize">
         {isMaximized ? <Copy size={11} /> : <Square size={11} />}
       </button>
       <button className="win-btn close" onClick={handleClose} title="Close">
-        <X size={13} />
+        <X size={12} />
       </button>
     </div>
   );
@@ -144,7 +124,6 @@ export default function App() {
   const [showSearch, setShowSearch] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | "error">("saved");
-  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
 
   const selected = notes.find((note) => note.id === selectedId) ?? null;
@@ -186,9 +165,6 @@ export default function App() {
         event.preventDefault();
         setShowSearch(true);
       }
-      if (event.key === "Escape") {
-        setContextMenu(null);
-      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -204,40 +180,21 @@ export default function App() {
     setTimeout(() => document.getElementById("note-title")?.focus(), 50);
   }
 
-  function duplicateNote(target: Note) {
-    const dupe = makeNote({
-      title: `${target.title} (Copy)`,
-      subtitle: target.subtitle,
-      icon: target.icon,
-      body: target.body,
-      folder: target.folder,
-      tags: [...(target.tags || [])],
-      cover: target.cover
-    });
-    setNotes(current => [dupe, ...current]);
-    setSelectedId(dupe.id);
+  function updateNote(patch: Partial<Note>) {
+    if (!selected) return;
+    setNotes(current => current.map(note => note.id === selected.id ? { ...note, ...patch, updatedAt: new Date().toISOString() } : note));
   }
 
-  function updateNote(patch: Partial<Note>, noteId?: string) {
-    const idToUpdate = noteId || selected?.id;
-    if (!idToUpdate) return;
-    setNotes(current => current.map(n => n.id === idToUpdate ? { ...n, ...patch, updatedAt: new Date().toISOString() } : n));
+  function moveNote(folder: Folder) {
+    updateNote({ folder, deletedAt: folder === "trash" ? new Date().toISOString() : null });
+    if (folder === "trash") setView("trash");
   }
 
-  function moveNote(folder: Folder, noteId?: string) {
-    const idToUpdate = noteId || selected?.id;
-    if (!idToUpdate) return;
-    setNotes(current => current.map(n => n.id === idToUpdate ? { ...n, folder, deletedAt: folder === "trash" ? new Date().toISOString() : null, updatedAt: new Date().toISOString() } : n));
-  }
-
-  function deleteForever(noteId?: string) {
-    const idToDelete = noteId || selected?.id;
-    if (!idToDelete) return;
-    const remaining = notes.filter(n => n.id !== idToDelete);
+  function deleteForever() {
+    if (!selected) return;
+    const remaining = notes.filter(note => note.id !== selected.id);
     setNotes(remaining);
-    if (selectedId === idToDelete) {
-      setSelectedId(remaining[0]?.id ?? null);
-    }
+    setSelectedId(remaining[0]?.id ?? null);
   }
 
   function chooseView(next: View) {
@@ -252,7 +209,7 @@ export default function App() {
   const counts = (folder: Folder) => notes.filter(note => note.folder === folder).length;
 
   return (
-    <div className={`app-shell ${sidebarOpen ? "" : "sidebar-collapsed"}`} onClick={() => setContextMenu(null)}>
+    <div className={`app-shell ${sidebarOpen ? "" : "sidebar-collapsed"}`}>
       {/* Top Titlebar with window drag region */}
       <header className="app-titlebar" data-tauri-drag-region>
         <div className="titlebar-brand" data-tauri-drag-region>
@@ -265,7 +222,7 @@ export default function App() {
         <div className="titlebar-drag-spacer" data-tauri-drag-region />
 
         <div className="titlebar-actions">
-          <button className="titlebar-btn search-trigger-btn" onClick={() => setShowSearch(true)} title="Search notes (Ctrl+K)">
+          <button className="titlebar-btn" onClick={() => setShowSearch(true)} title="Search (Ctrl+K)">
             <Search size={14} />
             <span>Search</span>
             <kbd>⌘K</kbd>
@@ -324,7 +281,7 @@ export default function App() {
                       setSelectedTag(tag === selectedTag ? null : tag);
                     }}
                   >
-                    <Tag size={14} />
+                    <Tag size={15} />
                     <span>#{tag}</span>
                   </button>
                 ))}
@@ -383,17 +340,6 @@ export default function App() {
                         note={note}
                         selected={note.id === selectedId}
                         onClick={() => setSelectedId(note.id)}
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setSelectedId(note.id);
-                          // Keep the menu fully visible when a card is near a window edge.
-                          setContextMenu({
-                            x: Math.max(8, Math.min(e.clientX, window.innerWidth - 182)),
-                            y: Math.max(8, Math.min(e.clientY, window.innerHeight - 250)),
-                            note
-                          });
-                        }}
                       />
                     ))
                   ) : (
@@ -440,22 +386,6 @@ export default function App() {
           }}
         />
       )}
-
-      {/* Right-Click Context Menu */}
-      {contextMenu && (
-        <NoteContextMenu
-          menu={contextMenu}
-          onClose={() => setContextMenu(null)}
-          onPin={() => updateNote({ pinned: !contextMenu.note.pinned }, contextMenu.note.id)}
-          onDuplicate={() => duplicateNote(contextMenu.note)}
-          onArchive={() => moveNote(contextMenu.note.folder === "archive" ? "inbox" : "archive", contextMenu.note.id)}
-          onTrash={() => moveNote(contextMenu.note.folder === "trash" ? "inbox" : "trash", contextMenu.note.id)}
-          onDeleteForever={() => deleteForever(contextMenu.note.id)}
-          onCopy={() => {
-            navigator.clipboard.writeText(cleanText(contextMenu.note.body));
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -470,16 +400,12 @@ function Nav({ icon: Icon, label, active, count, onClick }: { icon: typeof Inbox
   );
 }
 
-function NoteCard({ note, selected, onClick, onContextMenu }: { note: Note; selected: boolean; onClick(): void; onContextMenu(e: MouseEvent): void }) {
+function NoteCard({ note, selected, onClick }: { note: Note; selected: boolean; onClick(): void }) {
   const title = noteTitle(note);
   const snippet = note.subtitle || cleanText(note.body) || "No content yet";
 
   return (
-    <div
-      className={`note-card ${selected ? "selected" : ""}`}
-      onClick={onClick}
-      onContextMenu={onContextMenu}
-    >
+    <div className={`note-card ${selected ? "selected" : ""}`} onClick={onClick}>
       <div className="card-top-row">
         <span className="card-icon">{note.icon || "✦"}</span>
         <h3 className="card-title">{title}</h3>
@@ -500,62 +426,6 @@ function NoteCard({ note, selected, onClick, onContextMenu }: { note: Note; sele
   );
 }
 
-function NoteContextMenu({ menu, onClose, onPin, onDuplicate, onArchive, onTrash, onDeleteForever, onCopy }: {
-  menu: ContextMenuState;
-  onClose(): void;
-  onPin(): void;
-  onDuplicate(): void;
-  onArchive(): void;
-  onTrash(): void;
-  onDeleteForever(): void;
-  onCopy(): void;
-}) {
-  return (
-    <div
-      className="custom-context-menu"
-      style={{ top: menu.y, left: menu.x }}
-      onClick={e => e.stopPropagation()}
-    >
-      <button onClick={() => { onPin(); onClose(); }}>
-        <Pin size={14} />
-        <span>{menu.note.pinned ? "Unpin Note" : "Pin Note"}</span>
-      </button>
-      <button onClick={() => { onDuplicate(); onClose(); }}>
-        <Copy size={14} />
-        <span>Duplicate Note</span>
-      </button>
-      <button onClick={() => { onCopy(); onClose(); }}>
-        <FileText size={14} />
-        <span>Copy Text</span>
-      </button>
-      <div className="context-divider" />
-      {menu.note.folder !== "trash" && (
-        <button onClick={() => { onArchive(); onClose(); }}>
-          <Archive size={14} />
-          <span>{menu.note.folder === "archive" ? "Restore to Inbox" : "Archive Note"}</span>
-        </button>
-      )}
-      {menu.note.folder === "trash" ? (
-        <>
-          <button onClick={() => { onTrash(); onClose(); }}>
-            <RotateCcw size={14} />
-            <span>Restore to Inbox</span>
-          </button>
-          <button className="danger" onClick={() => { onDeleteForever(); onClose(); }}>
-            <Trash2 size={14} />
-            <span>Delete Permanently</span>
-          </button>
-        </>
-      ) : (
-        <button className="danger" onClick={() => { onTrash(); onClose(); }}>
-          <Trash2 size={14} />
-          <span>Move to Trash</span>
-        </button>
-      )}
-    </div>
-  );
-}
-
 function Editor({ note, editorRef, onUpdate, onMove, onDelete }: { note: Note | null; editorRef: RefObject<HTMLDivElement>; onUpdate(patch: Partial<Note>): void; onMove(folder: Folder): void; onDelete(): void }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -567,7 +437,7 @@ function Editor({ note, editorRef, onUpdate, onMove, onDelete }: { note: Note | 
             <Sparkles size={28} />
           </div>
           <h2>Select a Note</h2>
-          <p>Choose a note from the left list or create a new note to start writing.</p>
+          <p>Choose a note from the left sidebar list or create a new note to start writing.</p>
           <button className="primary-action-btn" onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "n", ctrlKey: true }))}>
             <Plus size={16} />
             <span>Create New Note</span>
@@ -665,32 +535,8 @@ function Editor({ note, editorRef, onUpdate, onMove, onDelete }: { note: Note | 
 }
 
 function NoteCoverBanner({ note, onUpdate }: { note: Note; onUpdate(patch: Partial<Note>): void }) {
-  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
-  const [iconPickerOpen, setIconPickerOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [tagDraft, setTagDraft] = useState("");
-  const bannerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const closePickers = (event: PointerEvent) => {
-      if (!bannerRef.current?.contains(event.target as Node)) {
-        setCoverPickerOpen(false);
-        setIconPickerOpen(false);
-      }
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setCoverPickerOpen(false);
-        setIconPickerOpen(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", closePickers);
-    window.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("pointerdown", closePickers);
-      window.removeEventListener("keydown", closeOnEscape);
-    };
-  }, []);
 
   const addTag = () => {
     const tag = tagDraft.trim().replace(/^#/, "");
@@ -701,19 +547,14 @@ function NoteCoverBanner({ note, onUpdate }: { note: Note; onUpdate(patch: Parti
   };
 
   return (
-    <div ref={bannerRef} className="note-cover-banner" style={note.cover ? { background: note.cover.value } : undefined}>
+    <div className="note-cover-banner" style={note.cover ? { background: note.cover.value } : undefined}>
       <div className="cover-controls">
-        <button className="cover-picker-btn" onClick={() => { setCoverPickerOpen(!coverPickerOpen); setIconPickerOpen(false); }}>
+        <button className="cover-picker-btn" onClick={() => setPickerOpen(!pickerOpen)}>
           <Palette size={14} />
-          <span>Cover Style</span>
+          <span>Change Cover</span>
         </button>
 
-        <button className="cover-picker-btn" onClick={() => { setIconPickerOpen(!iconPickerOpen); setCoverPickerOpen(false); }}>
-          <Smile size={14} />
-          <span>Icon Avatar</span>
-        </button>
-
-        {coverPickerOpen && (
+        {pickerOpen && (
           <div className="cover-popover">
             <span className="popover-title">Preset Styles</span>
             <div className="swatch-grid">
@@ -724,55 +565,31 @@ function NoteCoverBanner({ note, onUpdate }: { note: Note; onUpdate(patch: Parti
                   style={{ background: cover.value }}
                   onClick={() => {
                     onUpdate({ cover });
-                    setCoverPickerOpen(false);
+                    setPickerOpen(false);
                   }}
                 />
               ))}
             </div>
-            <button className="clear-cover-btn" onClick={() => { onUpdate({ cover: null }); setCoverPickerOpen(false); }}>
+            <button className="clear-cover-btn" onClick={() => { onUpdate({ cover: null }); setPickerOpen(false); }}>
               Remove Cover
-            </button>
-          </div>
-        )}
-
-        {iconPickerOpen && (
-          <div className="cover-popover icon-picker-popover">
-            {iconCategories.map(category => (
-              <div key={category.name} className="icon-category">
-                <span className="popover-title">{category.name}</span>
-                <div className="icon-grid">
-                  {category.icons.map(icon => (
-                    <button
-                      key={icon}
-                      className={`icon-grid-btn ${note.icon === icon ? "active" : ""}`}
-                      onClick={() => {
-                        onUpdate({ icon });
-                        setIconPickerOpen(false);
-                      }}
-                    >
-                      {icon}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-            <button className="clear-cover-btn" onClick={() => { onUpdate({ icon: "" }); setIconPickerOpen(false); }}>
-              Remove Icon Avatar
             </button>
           </div>
         )}
       </div>
 
-      <button
-        className="note-avatar-badge"
-        onClick={() => {
-          setIconPickerOpen(!iconPickerOpen);
-          setCoverPickerOpen(false);
-        }}
-        title="Click to change icon avatar"
-      >
-        {note.icon || "✦"}
-      </button>
+      <div className="emoji-picker-row">
+        {emojis.slice(0, 8).map(emoji => (
+          <button
+            key={emoji}
+            className={`emoji-btn ${note.icon === emoji ? "active" : ""}`}
+            onClick={() => onUpdate({ icon: emoji })}
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+
+      <div className="note-avatar-badge">{note.icon || "✦"}</div>
 
       <div className="tag-bar">
         <Tag size={13} className="tag-icon" />

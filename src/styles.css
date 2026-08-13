@@ -19,7 +19,7 @@
   --bg-subtle: #eaeae5;
   --bg-hover: #e6e6e0;
   --bg-selected: rgba(84, 117, 94, 0.12);
-
+  
   --border-color: #e3e3dc;
   --border-subtle: #eeeeea;
 
@@ -41,7 +41,7 @@
   --radius-xl: 20px;
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.09);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.14);
 
   --titlebar-height: 38px;
@@ -142,10 +142,10 @@ button {
 
 kbd {
   font-family: "DM Mono", monospace;
-  font-size: 11px;
+  font-size: 10px;
   background: var(--bg-subtle);
   color: var(--text-muted);
-  padding: 3px 6px;
+  padding: 2px 5px;
   border-radius: 4px;
   border: 1px solid var(--border-color);
   line-height: 1;
@@ -231,29 +231,21 @@ kbd {
 .titlebar-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 26px;
-  padding: 0 10px;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px;
   border-radius: var(--radius-sm);
   background: var(--bg-panel);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
-  font-size: 12px;
-  margin-right: 14px;
+  font-size: 11px;
+  margin-right: 12px;
   transition: all 0.15s ease;
 }
 
 .titlebar-btn:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
-}
-
-.titlebar-btn kbd {
-  font-size: 10px;
-  padding: 2px 5px;
-  background: var(--bg-subtle);
-  border-color: var(--border-color);
-  margin-left: 2px;
 }
 
 /* Window Control Buttons (Minimize, Maximize, Close) */
@@ -301,7 +293,7 @@ kbd {
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  padding: 14px 10px;
+  padding: 12px 10px;
   gap: 16px;
   transition: margin-left 0.22s ease, width 0.22s ease;
 }
@@ -313,12 +305,12 @@ kbd {
 .sidebar-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .primary-action-btn {
   flex: 1;
-  height: 38px;
+  height: 36px;
   background: var(--accent);
   color: var(--accent-text);
   border-radius: var(--radius-md);
@@ -326,8 +318,8 @@ kbd {
   font-size: 13px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 14px;
+  gap: 8px;
+  padding: 0 12px;
   box-shadow: var(--shadow-sm);
   transition: background 0.15s ease, transform 0.1s ease;
 }
@@ -342,11 +334,9 @@ kbd {
 
 .primary-action-btn kbd {
   margin-left: auto;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.2);
   color: inherit;
   border: none;
-  padding: 2px 6px;
-  font-size: 10px;
 }
 
 .icon-btn {
@@ -375,7 +365,7 @@ kbd {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   overflow-y: auto;
 }
 
@@ -385,7 +375,7 @@ kbd {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
-  padding: 10px 10px 4px;
+  padding: 8px 10px 4px;
 }
 
 .nav-section-label.margin-top {
@@ -478,7 +468,7 @@ kbd {
 
 .list-header {
   height: 48px;
-  padding: 0 14px;
+  padding: 0 12px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -625,57 +615,6 @@ kbd {
   background: var(--bg-hover);
 }
 
-/* Custom Context Menu */
-.custom-context-menu {
-  position: fixed;
-  z-index: 300;
-  width: 170px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  padding: 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  animation: menuFadeIn 0.12s ease-out;
-}
-
-@keyframes menuFadeIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.custom-context-menu button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 7px 10px;
-  font-size: 12px;
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  text-align: left;
-}
-
-.custom-context-menu button:hover {
-  background: var(--bg-hover);
-}
-
-.custom-context-menu button.danger {
-  color: var(--danger);
-}
-
-.custom-context-menu button.danger:hover {
-  background: rgba(217, 56, 56, 0.12);
-}
-
-.context-divider {
-  height: 1px;
-  background: var(--border-color);
-  margin: 3px 0;
-}
-
 /* ==========================================================================
    Editor Workspace
    ========================================================================== */
@@ -729,7 +668,7 @@ kbd {
 
 .editor-toolbar-header {
   height: 48px;
-  padding: 0 28px;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -748,7 +687,7 @@ kbd {
 .editor-top-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   position: relative;
 }
 
@@ -800,7 +739,7 @@ kbd {
 .editor-scroll-body {
   flex: 1;
   overflow-y: auto;
-  padding: 32px clamp(24px, 6vw, 96px);
+  padding: 24px clamp(20px, 5vw, 80px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -810,11 +749,11 @@ kbd {
 .note-cover-banner {
   width: 100%;
   max-width: var(--editor-max-width);
-  min-height: 130px;
+  min-height: 120px;
   border-radius: var(--radius-lg);
   position: relative;
-  margin-bottom: 32px;
-  padding: 14px;
+  margin-bottom: 24px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -824,8 +763,6 @@ kbd {
 
 .cover-controls {
   position: relative;
-  display: flex;
-  gap: 8px;
 }
 
 .cover-picker-btn {
@@ -834,7 +771,7 @@ kbd {
   gap: 6px;
   padding: 5px 10px;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.85);
   color: #1a1a1a;
   font-size: 11px;
   font-weight: 600;
@@ -842,25 +779,17 @@ kbd {
   box-shadow: var(--shadow-sm);
 }
 
-.cover-picker-btn:hover {
-  background: #ffffff;
-}
-
 .cover-popover {
   position: absolute;
-  top: 34px;
+  top: 32px;
   left: 0;
-  width: 230px;
+  width: 220px;
   background: var(--bg-panel);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  padding: 12px;
+  box-shadow: var(--shadow-md);
+  padding: 10px;
   z-index: 20;
-}
-
-.icon-picker-popover {
-  width: 260px;
 }
 
 .popover-title {
@@ -884,67 +813,49 @@ kbd {
   border: 1px solid var(--border-color);
 }
 
-.icon-category {
-  margin-bottom: 10px;
-}
-
-.icon-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
-}
-
-.icon-grid-btn {
-  height: 30px;
-  border-radius: 6px;
-  font-size: 14px;
-  display: grid;
-  place-items: center;
-  transition: background 0.12s ease;
-}
-
-.icon-grid-btn:hover {
-  background: var(--bg-hover);
-}
-
-.icon-grid-btn.active {
-  background: var(--accent-light);
-  outline: 1px solid var(--accent);
-}
-
 .clear-cover-btn {
   width: 100%;
   font-size: 11px;
   color: var(--text-secondary);
-  padding: 6px;
+  padding: 4px;
   text-align: center;
-  border-top: 1px solid var(--border-subtle);
-  margin-top: 4px;
 }
 
-.clear-cover-btn:hover {
-  color: var(--danger);
+.emoji-picker-row {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 4px;
+}
+
+.emoji-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  display: grid;
+  place-items: center;
+}
+
+.emoji-btn.active {
+  outline: 2px solid var(--accent);
 }
 
 .note-avatar-badge {
   position: absolute;
-  bottom: -20px;
-  left: 20px;
-  width: 46px;
-  height: 46px;
-  border-radius: 13px;
+  bottom: -18px;
+  left: 18px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: var(--bg-panel);
   border: 2px solid var(--bg-editor);
   box-shadow: var(--shadow-sm);
   display: grid;
   place-items: center;
   font-size: 22px;
-  cursor: pointer;
-  transition: transform 0.15s ease;
-}
-
-.note-avatar-badge:hover {
-  transform: scale(1.06);
 }
 
 .tag-bar {
@@ -953,8 +864,8 @@ kbd {
   flex-wrap: wrap;
   gap: 6px;
   margin-left: auto;
-  background: rgba(255, 255, 255, 0.88);
-  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
   backdrop-filter: blur(8px);
 }
@@ -967,7 +878,7 @@ kbd {
   font-size: 11px;
   color: #1a1a1a;
   background: rgba(0, 0, 0, 0.08);
-  padding: 2px 7px;
+  padding: 2px 6px;
   border-radius: 4px;
   display: inline-flex;
   align-items: center;
@@ -998,20 +909,18 @@ kbd {
 
 .title-input {
   font-family: "Newsreader", Georgia, serif;
-  font-size: clamp(30px, 4vw, 42px);
+  font-size: clamp(28px, 4vw, 38px);
   font-weight: 600;
   border: none;
   background: transparent;
   outline: none;
   color: var(--text-primary);
-  margin-top: 14px;
-  margin-bottom: 8px;
-  letter-spacing: -0.02em;
+  margin-bottom: 6px;
 }
 
 .title-input::placeholder {
   color: var(--text-muted);
-  opacity: 0.45;
+  opacity: 0.5;
 }
 
 .subtitle-input {
@@ -1021,12 +930,12 @@ kbd {
   border: none;
   background: transparent;
   outline: none;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .subtitle-input::placeholder {
   color: var(--text-muted);
-  opacity: 0.45;
+  opacity: 0.5;
 }
 
 /* Rich Text Formatting Toolbar */
@@ -1040,11 +949,11 @@ kbd {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 10px;
+  padding: 6px 8px;
   background: var(--bg-panel);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   box-shadow: var(--shadow-sm);
   width: fit-content;
 }
@@ -1079,46 +988,45 @@ kbd {
 
 /* TipTap Editable Content Area */
 .tiptap-editable-content {
-  min-height: 420px;
+  min-height: 400px;
   outline: none;
   font-family: "Newsreader", Georgia, serif;
   font-size: var(--body-size);
-  line-height: 1.8;
+  line-height: 1.7;
   color: var(--text-primary);
-  letter-spacing: 0.005em;
 }
 
 .tiptap-editable-content:empty::before {
   content: attr(data-placeholder);
   color: var(--text-muted);
-  opacity: 0.45;
+  opacity: 0.5;
   pointer-events: none;
 }
 
 .tiptap-editable-content p {
-  margin-bottom: 1.4em;
+  margin-bottom: 1.2em;
 }
 
 .tiptap-editable-content ul, .tiptap-editable-content ol {
-  padding-left: 1.6em;
-  margin-bottom: 1.4em;
+  padding-left: 1.5em;
+  margin-bottom: 1.2em;
 }
 
 .tiptap-editable-content blockquote {
   border-left: 3px solid var(--accent);
-  padding-left: 16px;
+  padding-left: 14px;
   color: var(--text-secondary);
   font-style: italic;
-  margin-bottom: 1.4em;
+  margin-bottom: 1.2em;
 }
 
 .tiptap-editable-content pre {
   background: var(--bg-subtle);
-  padding: 14px;
+  padding: 12px;
   border-radius: var(--radius-md);
   font-family: "DM Mono", monospace;
   font-size: 13px;
-  margin-bottom: 1.4em;
+  margin-bottom: 1.2em;
   overflow-x: auto;
 }
 
@@ -1259,11 +1167,6 @@ kbd {
   color: var(--text-secondary);
 }
 
-.shortcut-item kbd {
-  margin-left: 20px;
-  flex: 0 0 auto;
-}
-
 /* ==========================================================================
    Search Modal & Status Indicator
    ========================================================================== */
@@ -1354,6 +1257,7 @@ kbd {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
 }
 
 .search-empty {
