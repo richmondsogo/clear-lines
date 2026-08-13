@@ -106,7 +106,7 @@ function WindowControls() {
         setIsMaximized(Boolean(maxed));
         return;
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error('invoke maximize error', e);
       try {
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
@@ -114,11 +114,9 @@ function WindowControls() {
         const maxed = await getCurrentWindow().isMaximized();
         setIsMaximized(Boolean(maxed));
         return;
-      } catch (e2: any) {
+      } catch (e2) {
         console.error('fallback maximize error', e2);
       }
-    } catch (e) {
-      console.warn("Maximize failed:", e);
     }
   };
 
@@ -131,14 +129,14 @@ function WindowControls() {
   };
 
   return (
-    <div className="window-controls" data-tauri-drag-region={false}>
-      <button className="win-btn minimize" onClick={handleMinimize} title="Minimize">
+    <div className="window-controls">
+      <button className="win-btn minimize" data-tauri-drag-region="false" onClick={handleMinimize} title="Minimize">
         <Minus size={13} />
       </button>
       <button className="win-btn maximize" data-tauri-drag-region="false" onClick={handleMaximize} title="Maximize">
         {isMaximized ? <Copy size={11} /> : <Square size={11} />}
       </button>
-      <button className="win-btn close" onClick={handleClose} title="Close">
+      <button className="win-btn close" data-tauri-drag-region="false" onClick={handleClose} title="Close">
         <X size={13} />
       </button>
     </div>
