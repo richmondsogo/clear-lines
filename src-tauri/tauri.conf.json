@@ -9,9 +9,6 @@
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
-  "allowlist": {
-    "all": true
-  },
 
   "app": {
     "windows": [{
