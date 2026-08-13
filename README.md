@@ -1,117 +1,118 @@
-# Clear Lines - Windows Notes App
+# Clear Lines
 
-Clear Lines is a focused, offline-first Tauri v2 desktop notes app that
-prioritizes a quiet writing surface and fast local search.
+Clear Lines is a focused, offline-first Tauri v2 desktop notes app.
+It gives a quiet writing surface, local storage, and fast search.
 
-This README explains how to run and test the project locally (web UI and
-desktop app), how to build and package, the project layout, and common
-troubleshooting tips so you (or any other developer) can pick this up months
-later.
+This README follows a simple structure: quick start, development, build,
+project layout, and troubleshooting. It uses short sentences and clear
+instructions so you can pick this up later.
 
----
+Contents
+- Quick start
+- Development (web and desktop)
+- Build & package
+- Project layout
+- Key files and code notes
+- Troubleshooting
+- Contributing
 
-## Quick answer — "How do I test it in localhost before compiling?"
+Quick start
 
-- Install dependencies: `npm install`
-- Start the web dev server (fast, hot-reloading): `npm run dev`
-- Open the web UI in your browser at: http://localhost:5173 (Vite default)
+Prerequisites
+- Node.js 20+ and npm
+- Rust (stable) and tooling for Tauri (only required to build the desktop app)
+  - On Windows install Visual Studio Build Tools with "Desktop development
+    with C++" (MSVC) workload.
 
-Running `npm run dev` is usually enough to verify the UI behavior without
-building the native Tauri runtime. Use `npm run tauri:dev` to run the full
-desktop app (that compiles the Rust backend and launches a Tauri window).
+Fast local test (web only)
+1. npm install
+2. npm run dev
+3. Open the URL printed by Vite (typically http://localhost:5173 or 1420)
 
----
-
-## Prerequisites
-
-- Node.js 20+ (or the version used in development)
-- npm (comes with Node) or another package manager
-- For the Tauri desktop app: Rust (stable) and platform build tools. See
-  Tauri v2 prerequisites: https://tauri.app/v2/guides/getting-started/prerequisites
-
-Windows-specific notes
-- Install "Desktop development with C++" workload via Visual Studio Build Tools
-  (required by the Rust MSVC toolchain used to build Tauri native code).
-- Make sure the Rust toolchain is installed: `rustup toolchain install stable`
-
----
-
-## Common local commands
-
-- Install deps: `npm install`
-- Run web UI (hot reload): `npm run dev`  -> open http://localhost:5173
-- Run Tauri desktop in dev mode: `npm run tauri:dev` (builds Rust parts and
-  launches the native window)
-- Build web & bundle for tauri: `npm run build` then `npm run tauri:build` or
-  `npx tauri build`
-- Run tests: `npm run test` (uses Vitest)
+Run the native desktop app (dev)
+1. npm install
+2. npx tauri dev
 
 Notes
-- `npm run dev` is the recommended fast feedback loop. It serves the web UI
-  with Vite and supports HMR (hot module replacement).
-- `npm run tauri:dev` runs the whole desktop app and may require toolchains
-  (Rust, C++ build tools). Expect longer startup time there because the
-  native backend must compile.
+- Use the web dev server (`npm run dev`) for fast UI iteration. It supports
+  hot module reloading.
+- `npx tauri dev` compiles the Rust backend and launches a native window. It
+  is slower but required to test native APIs.
 
----
+Build and package
 
-## Project layout
+1. npm install
+2. npm run build        # builds web assets (tsc + vite)
+3. npx tauri build      # builds native bundles (installer/executable)
 
-- src/ — front-end web UI (React + TypeScript + Tiptap editor)
-- src-tauri/ — Rust backend for the Tauri desktop app
-- package.json — NPM scripts and dependencies
-- README.md — this file
+Common options
+- Build for a specific target (example Windows x64):
+  npx tauri build --target x86_64-pc-windows-msvc
 
-If you want to change UI code, start in `src/`. If you need native features or
-platform APIs, look into `src-tauri/`.
+Where to find artifacts
+- After a successful `npx tauri build`, artifacts are under:
+  `src-tauri/target/release/bundle/` and a platform-specific subfolder.
 
----
+Project layout
 
-## Testing & validation
+- src/ — front-end (React + TypeScript)
+- src-tauri/ — Rust backend for Tauri
+- package.json — npm scripts
+- README.md — this document
 
-- Unit / component tests: `npm run test`
-- Type check & web build: `npm run build` (runs tsc and Vite build)
-- Validate Rust project: `cargo check --manifest-path src-tauri/Cargo.toml`
+Key files and important code notes
 
----
+src/App.tsx
+- WindowControls component
+  - Manages minimize, maximize, and close buttons for the custom titlebar.
+  - Uses Tauri's window APIs. Primary path: calls Rust commands via
+    `@tauri-apps/api/core` (invoke). If that fails, it falls back to the
+    JavaScript window API from `@tauri-apps/api/window`.
+  - The component opts out of the drag region for the buttons so clicks work
+    correctly on Windows.
 
-## Troubleshooting (common issues)
+- Titlebar dragging
+  - The titlebar uses explicit JS dragging: on mousedown the front end calls
+    `getCurrentWindow().startDragging()` when the user drags the titlebar.
+  - This avoids nested drag-region issues on Windows while allowing buttons to
+    remain clickable.
 
-1. "tauri dev" fails on Windows with linker errors:
-   - Ensure Visual Studio Build Tools are installed with the "Desktop
-     development with C++" workload and that the MSVC toolchain is available.
-   - Run `rustup default stable` and `rustup target list --installed` to verify
-     toolchain state.
+src-tauri/src/lib.rs
+- Rust command handlers are registered with Tauri's invoke handler.
+  - `minimize_window` — minimize the main window
+  - `toggle_maximize` — toggle maximize / unmaximize and return the new state
+  - `close_window` — close the main window
+  - `is_maximized` — return whether the window is maximized
 
-2. Port conflicts when running `npm run dev`:
-   - Vite usually uses 5173. If that port is already used, Vite will pick a
-     different port and print the URL in the terminal.
+Troubleshooting
 
-3. Native build is slow or fails:
-   - Confirm Rust is up to date (`rustup update`) and the correct target is
-     installed. Check `cargo` output for the specific error.
+1) Vite port already in use
+- Use: npx kill-port 1420
+- Or find and stop the PID: `netstat -ano | findstr :1420` and `Stop-Process -Id <PID> -Force`
 
----
+2) Native build errors on Windows
+- Install Visual Studio Build Tools → "Desktop development with C++".
+- Ensure Rust toolchain is installed and updated: `rustup update`
+- Run `cargo check --manifest-path src-tauri/Cargo.toml` to see native errors.
 
-## Contributing / workflow notes
+3) Runtime errors calling window APIs
+- The front end first calls Rust commands (invoke). If invoke fails, the code
+  falls back to `getCurrentWindow()` calls. Check DevTools console and the
+  terminal that runs `npx tauri dev` for error details.
 
-- Create a branch for your work: `git checkout -b feature/short-description`
-- Keep commits small and focused. When ready, push branch and open a PR.
-- Run `npm run test` and `npm run build` before opening a PR to catch errors.
+Contributing
 
----
+- Create a branch: `git checkout -b feat/short-description`
+- Run tests & build: `npm run test` and `npm run build`
+- Open a PR against `main`
 
-## Where data is stored
+License & privacy
+- The app stores all data locally. It does not send notes or preferences to
+  any external service.
 
-Notes and preferences are stored locally inside the Tauri webview storage
-(IndexedDB / local storage depending on the implementation). The app does not
-send data to any network service.
+If you want, I can:
+- Add more inline comments in specific files
+- Add a short HOWTO for signing Windows installers
+- Create a small developer checklist in the repo
 
----
-
-If anything is unclear or the environment has changed when you pick this up in
-three months, run `npm run dev` and the console output from Vite is the best
-place to start — it will show missing dependencies, the running URL, and
-helpful hints about build failures.
-
-Happy hacking.
+End of README
