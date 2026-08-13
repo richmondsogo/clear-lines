@@ -82,10 +82,21 @@ function WindowControls() {
       if (isTauri) {
         const { invoke } = await import('@tauri-apps/api/core');
         await invoke('minimize_window');
+        showDebug('minimize ok');
+        return;
       }
     } catch (e: any) {
-      console.error(e);
-      showDebug(e?.toString() ?? 'minimize failed');
+      console.error('invoke minimize error', e);
+      // fallback to window API
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        await getCurrentWindow().minimize();
+        showDebug('minimize ok (fallback)');
+        return;
+      } catch (e2: any) {
+        console.error('fallback minimize error', e2);
+        showDebug('minimize failed: ' + (e2?.toString() ?? e?.toString() ?? 'unknown'));
+      }
     }
   };
 
@@ -96,10 +107,22 @@ function WindowControls() {
         const { invoke } = await import('@tauri-apps/api/core');
         const maxed = await invoke('toggle_maximize');
         setIsMaximized(Boolean(maxed));
+        showDebug('maximize ok');
+        return;
       }
     } catch (e: any) {
-      console.error(e);
-      showDebug(e?.toString() ?? 'maximize failed');
+      console.error('invoke maximize error', e);
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        await getCurrentWindow().toggleMaximize();
+        const maxed = await getCurrentWindow().isMaximized();
+        setIsMaximized(Boolean(maxed));
+        showDebug('maximize ok (fallback)');
+        return;
+      } catch (e2: any) {
+        console.error('fallback maximize error', e2);
+        showDebug('maximize failed: ' + (e2?.toString() ?? e?.toString() ?? 'unknown'));
+      }
     }
   };
 
@@ -109,10 +132,20 @@ function WindowControls() {
       if (isTauri) {
         const { invoke } = await import('@tauri-apps/api/core');
         await invoke('close_window');
+        showDebug('close ok');
+        return;
       }
     } catch (e: any) {
-      console.error(e);
-      showDebug(e?.toString() ?? 'close failed');
+      console.error('invoke close error', e);
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        await getCurrentWindow().close();
+        showDebug('close ok (fallback)');
+        return;
+      } catch (e2: any) {
+        console.error('fallback close error', e2);
+        showDebug('close failed: ' + (e2?.toString() ?? e?.toString() ?? 'unknown'));
+      }
     }
   };
 
