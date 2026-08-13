@@ -125,47 +125,47 @@ function WindowControls() {
     }
   };
 
-  // Maximize: invoke Rust command and update local state.
+  // Maximize: robust flow that prefers invoke, then window API.
   const handleMaximize = async () => {
     try {
       if (isTauri) {
-        const { invoke } = await import('@tauri-apps/api/core');
-        const maxed = await invoke('toggle_maximize');
-        setIsMaximized(Boolean(maxed));
-        return;
-      }
-    } catch (e) {
-      console.error('invoke maximize error', e);
-      try {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        await getCurrentWindow().toggleMaximize();
-        const maxed = await getCurrentWindow().isMaximized();
-        setIsMaximized(Boolean(maxed));
-        return;
-      } catch (e2) {
-        console.error('fallback maximize error', e2);
-      }
-        const win = getCurrentWindow();
-        if (typeof (win as any).toggleMaximize === 'function') {
-          await (win as any).toggleMaximize();
-        } else {
-          const wasMax = await win.isMaximized();
-          if (wasMax) await (win as any).unmaximize?.(); else await (win as any).maximize?.();
+        // Prefer Rust invoke for consistent behavior across environments.
+        try {
+          const res = await invoke('toggle_maximize');
+          // Some invoke handlers return whether the window is now maximized.
+          setIsMaximized(Boolean(res));
+          return;
+        } catch (invokeErr) {
+          console.error('invoke toggle_maximize failed:', invokeErr);
+          // fall through to try the window API
         }
-        const nowMax = await win.isMaximized();
-        setIsMaximized(Boolean(nowMax));
-        return;
+
+        // Try the JS window API next.
+        try {
+          const win = getCurrentWindow();
+          if (typeof (win as any).toggleMaximize === 'function') {
+            await (win as any).toggleMaximize();
+          } else {
+            const wasMax = await win.isMaximized();
+            if (wasMax) await (win as any).unmaximize?.(); else await (win as any).maximize?.();
+          }
+          const nowMax = await win.isMaximized();
+          setIsMaximized(Boolean(nowMax));
+          return;
+        } catch (winErr) {
+          console.warn('Window API maximize attempt failed:', winErr);
+        }
       }
     } catch (e) {
-      console.warn("Maximize via window API failed:", e);
+      console.warn('Maximize failed:', e);
     }
 
-    // Fallback to Rust invoke command
+    // Last resort: try invoke even if not on tauri environment
     try {
       const res = await invoke('toggle_maximize');
       setIsMaximized(Boolean(res));
     } catch (e) {
-      console.error('invoke toggle_maximize failed:', e);
+      console.error('Final invoke toggle_maximize failed:', e);
     }
   };
 
@@ -192,16 +192,13 @@ function WindowControls() {
   };
 
   return (
-    <div className="window-controls" data-tauri-drag-region={false}>
-      <button className="win-btn minimize" data-tauri-drag-region={false} onClick={handleMinimize} title="Minimize">
-    <div className="window-controls">
+    <div className="window-controls" data-tauri-drag-region="false">
       <button className="win-btn minimize" data-tauri-drag-region="false" onClick={handleMinimize} title="Minimize">
         <Minus size={13} />
       </button>
-      <button className="win-btn maximize" data-tauri-drag-region={false} onClick={handleMaximize} title="Maximize">
+      <button className="win-btn maximize" data-tauri-drag-region="false" onClick={handleMaximize} title="Maximize">
         {isMaximized ? <Copy size={11} /> : <Square size={11} />}
       </button>
-      <button className="win-btn close" data-tauri-drag-region={false} onClick={handleClose} title="Close">
       <button className="win-btn close" data-tauri-drag-region="false" onClick={handleClose} title="Close">
         <X size={13} />
       </button>
