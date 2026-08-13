@@ -129,14 +129,14 @@ function WindowControls() {
   };
 
   return (
-    <div className="window-controls" data-tauri-drag-region={false}>
-      <button className="win-btn minimize" onClick={handleMinimize} title="Minimize">
+    <div className="window-controls">
+      <button className="win-btn minimize" data-tauri-drag-region="false" onClick={handleMinimize} title="Minimize">
         <Minus size={13} />
       </button>
       <button className="win-btn maximize" data-tauri-drag-region="false" onClick={handleMaximize} title="Maximize">
         {isMaximized ? <Copy size={11} /> : <Square size={11} />}
       </button>
-      <button className="win-btn close" onClick={handleClose} title="Close">
+      <button className="win-btn close" data-tauri-drag-region="false" onClick={handleClose} title="Close">
         <X size={13} />
       </button>
     </div>
