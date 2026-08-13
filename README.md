@@ -15,7 +15,7 @@ Clear Lines gives you a quiet writing surface with local storage and fast search
 
 Clear Lines was built using AI coding agents — Codex and Antigravity — as the primary development workflow, submitted for The Orchestra: AO Hackathon. Most iteration happened directly in VS Code's agent panel and terminal sessions, with [Agent Orchestrator](https://aoagents.dev) tracking a build task on its Kanban board (shown in the demo video below).
 
-**Demo video:** [add your link here]
+**Demo video:** https://www.youtube.com/watch?v=9BD88ib1vLY
 
 ## Quick start
 
