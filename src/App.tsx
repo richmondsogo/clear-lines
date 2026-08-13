@@ -62,6 +62,7 @@ function formatDate(date: string) {
 
 function WindowControls() {
   const [isMaximized, setIsMaximized] = useState(false);
+  const [debugMsg, setDebugMsg] = useState<string | null>(null);
   const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
   useEffect(() => {
@@ -70,15 +71,23 @@ function WindowControls() {
     appWindow.isMaximized().then(setIsMaximized).catch(() => {});
   }, [isTauri]);
 
+  const showDebug = (msg: string) => {
+    setDebugMsg(msg);
+    setTimeout(() => setDebugMsg(null), 2000);
+  };
+
   const handleMinimize = async () => {
+    showDebug('minimize clicked');
     try {
       if (isTauri) await getCurrentWindow().minimize();
     } catch (e) {
       console.warn(e);
+      showDebug('minimize failed');
     }
   };
 
   const handleMaximize = async () => {
+    showDebug('maximize clicked');
     try {
       if (isTauri) {
         await getCurrentWindow().toggleMaximize();
@@ -87,14 +96,17 @@ function WindowControls() {
       }
     } catch (e) {
       console.warn(e);
+      showDebug('maximize failed');
     }
   };
 
   const handleClose = async () => {
+    showDebug('close clicked');
     try {
       if (isTauri) await getCurrentWindow().close();
     } catch (e) {
       console.warn(e);
+      showDebug('close failed');
     }
   };
 
@@ -109,6 +121,7 @@ function WindowControls() {
       <button className="win-btn close" data-tauri-drag-region="false" onClick={handleClose} title="Close">
         <X size={12} />
       </button>
+      {debugMsg ? <div className="dbg" aria-live="polite">{debugMsg}</div> : null}
     </div>
   );
 }
