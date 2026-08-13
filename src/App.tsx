@@ -106,7 +106,7 @@ function WindowControls() {
         setIsMaximized(Boolean(maxed));
         return;
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error('invoke maximize error', e);
       try {
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
@@ -114,11 +114,11 @@ function WindowControls() {
         const maxed = await getCurrentWindow().isMaximized();
         setIsMaximized(Boolean(maxed));
         return;
-      } catch (e2: any) {
+      } catch (e2) {
         console.error('fallback maximize error', e2);
       }
     }
-  ;
+  };
 
   const handleClose = async () => {
     try {
